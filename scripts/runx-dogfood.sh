@@ -5,6 +5,7 @@ AUTOMATON_ROOT="${AUTOMATON_ROOT:-$(pwd)}"
 RUNX_ROOT="${RUNX_ROOT:?set RUNX_ROOT to the runx workspace root}"
 ARTIFACT_DIR="${ARTIFACT_DIR:-$AUTOMATON_ROOT/.artifacts/runx-dogfood}"
 RUNX_ANSWERS_DIR="${RUNX_ANSWERS_DIR:-}"
+RUNX_DOGFOOD_PROFILE="${RUNX_DOGFOOD_PROFILE:-full}"
 CLI_BIN="$RUNX_ROOT/oss/packages/cli/dist/index.js"
 
 mkdir -p "$ARTIFACT_DIR"
@@ -49,37 +50,38 @@ run_json sourcey \
   skill "$RUNX_ROOT/oss/skills/sourcey" \
   --project "$AUTOMATON_ROOT"
 
-run_json content-pipeline \
-  skill "$RUNX_ROOT/oss/skills/content-pipeline" \
-  --objective "Draft the next automaton operator update from repo evidence" \
-  --audience operators \
-  --domain "oss repo operations" \
-  --operator_context "Ground claims in committed repo state only." \
-  --target_entities automaton \
-  --target_entities runx
+if [[ "$RUNX_DOGFOOD_PROFILE" != "minimal" ]]; then
+  run_json content-pipeline \
+    skill "$RUNX_ROOT/oss/skills/content-pipeline" \
+    --objective "Draft the next automaton operator update from repo evidence" \
+    --audience operators \
+    --domain "oss repo operations" \
+    --operator_context "Ground claims in committed repo state only." \
+    --target_entities automaton \
+    --target_entities runx
 
-run_json market-intelligence \
-  skill "$RUNX_ROOT/oss/skills/market-intelligence" \
-  --objective "Identify the highest-signal change in the automaton repo this week" \
-  --audience operators \
-  --domain "oss repo operations" \
-  --operator_context "Favor repo evidence over generic ecosystem claims." \
-  --target_entities automaton \
-  --target_entities runx
+  run_json market-intelligence \
+    skill "$RUNX_ROOT/oss/skills/market-intelligence" \
+    --objective "Identify the highest-signal change in the automaton repo this week" \
+    --audience operators \
+    --domain "oss repo operations" \
+    --operator_context "Favor repo evidence over generic ecosystem claims." \
+    --target_entities automaton \
+    --target_entities runx
 
-run_json skill-testing \
-  skill "$RUNX_ROOT/oss/skills/skill-testing" \
-  --skill_ref "$RUNX_ROOT/oss/skills/sourcey" \
-  --objective "Assess whether sourcey is strong enough to document automaton safely" \
-  --test_constraints "Use repo-local evidence and inline harness receipts only."
+  run_json skill-testing \
+    skill "$RUNX_ROOT/oss/skills/skill-testing" \
+    --skill_ref "$RUNX_ROOT/oss/skills/sourcey" \
+    --objective "Assess whether sourcey is strong enough to document automaton safely" \
+    --test_constraints "Use repo-local evidence and inline harness receipts only."
 
-run_json research \
-  skill "$RUNX_ROOT/oss/skills/research" \
-  --objective "Identify the next highest-leverage improvement for automaton" \
-  --domain "oss repo operations" \
-  --deliverable "operator brief" \
-  --target_entities automaton \
-  --target_entities runx
+  run_json research \
+    skill "$RUNX_ROOT/oss/skills/research" \
+    --objective "Identify the next highest-leverage improvement for automaton" \
+    --domain "oss repo operations" \
+    --deliverable "operator brief" \
+    --target_entities automaton \
+    --target_entities runx
+fi
 
 echo "dogfood artifacts written to $ARTIFACT_DIR"
-

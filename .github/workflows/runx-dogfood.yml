@@ -40,6 +40,7 @@ jobs:
           RUNX_ROOT: ${{ github.workspace }}/runx
           ARTIFACT_DIR: ${{ github.workspace }}/automaton-artifacts
           AUTOMATON_ROOT: ${{ github.workspace }}
+          RUNX_DOGFOOD_PROFILE: minimal
         run: |
           chmod +x scripts/runx-dogfood.sh
           bash scripts/runx-dogfood.sh

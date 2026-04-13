@@ -93,7 +93,9 @@ async function runWorker({ options, workerRequest, index }) {
     const traceDir = path.join(artifactDir, "provider-trace");
     const skillPath = resolveRunxSkillPath(options.runxRoot, "issue-to-pr");
     const repoSnapshot = buildRepoSnapshot(workDir, targetRepo);
-    await writeFile(path.join(artifactDir, "repo-snapshot.json"), `${JSON.stringify(repoSnapshot, null, 2)}\n`);
+    const repoSnapshotPath = path.join(artifactDir, "repo-snapshot.json");
+    await writeFile(repoSnapshotPath, `${JSON.stringify(repoSnapshot, null, 2)}\n`);
+    const inlineRepoSnapshot = buildInlineRepoSnapshot(repoSnapshot);
     const bridgeArgs = [
       path.join(repoRoot, "scripts", "runx-agent-bridge.mjs"),
       "--runx-root",
@@ -127,7 +129,9 @@ async function runWorker({ options, workerRequest, index }) {
       "--target_repo",
       targetRepo,
       "--repo_snapshot",
-      JSON.stringify(repoSnapshot),
+      JSON.stringify(inlineRepoSnapshot),
+      "--repo_snapshot_path",
+      repoSnapshotPath,
       "--repo_context",
       buildRepoContextSummary(repoSnapshot),
       "--size",
@@ -266,6 +270,35 @@ function buildRepoSnapshot(workDir, targetRepo) {
     submodules: readGitSubmoduleStatus(workDir),
   };
   return snapshot;
+}
+
+export function buildInlineRepoSnapshot(snapshot) {
+  const topLevelEntries = Array.isArray(snapshot.top_level_entries)
+    ? snapshot.top_level_entries.slice(0, 12).map((entry) => ({
+        name: entry.name,
+        kind: entry.kind,
+      }))
+    : [];
+  const manifests = {};
+
+  for (const [manifestPath, manifest] of Object.entries(snapshot.manifests ?? {})) {
+    manifests[manifestPath] = {
+      name: manifest?.name ?? null,
+      private: manifest?.private ?? null,
+      scripts: Array.isArray(manifest?.scripts) ? manifest.scripts.slice(0, 8) : [],
+      excerpt: typeof manifest?.excerpt === "string" ? manifest.excerpt.slice(0, 240) : undefined,
+      parse_error: manifest?.parse_error === true ? true : undefined,
+    };
+  }
+
+  return {
+    target_repo: snapshot.target_repo,
+    git: snapshot.git,
+    top_level_entries: topLevelEntries,
+    notable_paths: Array.isArray(snapshot.notable_paths) ? snapshot.notable_paths.slice(0, 12) : [],
+    manifests,
+    submodules: Array.isArray(snapshot.submodules) ? snapshot.submodules.slice(0, 6) : [],
+  };
 }
 
 function buildGitSnapshot(workDir) {

@@ -35,14 +35,15 @@ if (existing?.body?.trim() === commentBody) {
   process.exit(0);
 }
 
-if (existing?.id) {
+const existingCommentId = resolveIssueCommentId(existing);
+if (existingCommentId) {
   execFileSync(
     "gh",
     [
       "api",
       "--method",
       "PATCH",
-      `repos/${options.repo}/issues/comments/${existing.id}`,
+      `repos/${options.repo}/issues/comments/${existingCommentId}`,
       "-f",
       `body=${commentBody}`,
     ],
@@ -52,7 +53,7 @@ if (existing?.id) {
   );
 
   process.stdout.write(
-    `${JSON.stringify({ status: "updated", comment_id: existing.id }, null, 2)}\n`,
+    `${JSON.stringify({ status: "updated", comment_id: existingCommentId }, null, 2)}\n`,
   );
   process.exit(0);
 }
@@ -107,4 +108,20 @@ function requireValue(argv, index, flag) {
     throw new Error(`${flag} requires a value.`);
   }
   return value;
+}
+
+function resolveIssueCommentId(comment) {
+  if (!comment || typeof comment !== "object") {
+    return undefined;
+  }
+  if (typeof comment.databaseId === "number") {
+    return String(comment.databaseId);
+  }
+  if (typeof comment.url === "string") {
+    const match = comment.url.match(/issuecomment-(\d+)$/);
+    if (match?.[1]) {
+      return match[1];
+    }
+  }
+  return undefined;
 }

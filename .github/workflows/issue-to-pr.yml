@@ -73,6 +73,7 @@ jobs:
         run: |
           curl -fsSL https://raw.githubusercontent.com/nilstate/scafld/main/install.sh | sh
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          "$HOME/.local/bin/scafld" --version
 
       - name: Configure git author
         if: ${{ steps.preflight.outputs.enabled == 'true' }}

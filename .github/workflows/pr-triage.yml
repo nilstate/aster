@@ -54,7 +54,7 @@ jobs:
         with:
           repository: ${{ vars.RUNX_REPOSITORY || 'auscaster/runx' }}
           ref: ${{ vars.RUNX_REF || 'main' }}
-          path: runx
+          path: .runx/runx
 
       - name: Set up Node.js
         if: ${{ steps.preflight.outputs.enabled == 'true' }}
@@ -69,8 +69,8 @@ jobs:
       - name: Install and build runx
         if: ${{ steps.preflight.outputs.enabled == 'true' }}
         run: |
-          pnpm --dir runx install --no-frozen-lockfile
-          pnpm --dir runx build
+          pnpm --dir .runx/runx install --no-frozen-lockfile
+          pnpm --dir .runx/runx build
 
       - name: Build PR snapshot
         if: ${{ steps.preflight.outputs.enabled == 'true' }}
@@ -87,12 +87,12 @@ jobs:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: |
           node scripts/runx-agent-bridge.mjs \
-            --runx-root "$GITHUB_WORKSPACE/runx" \
+            --runx-root "$GITHUB_WORKSPACE/.runx/runx" \
             --receipt-dir "$GITHUB_WORKSPACE/.artifacts/pr-triage/receipts" \
             --trace-dir "$GITHUB_WORKSPACE/.artifacts/pr-triage/provider-trace" \
             --output "$GITHUB_WORKSPACE/.artifacts/pr-triage/result.json" \
             -- \
-            skill "$GITHUB_WORKSPACE/runx/skills/github-triage" \
+            skill "$GITHUB_WORKSPACE/.runx/runx/skills/github-triage" \
             --runner respond \
             --objective "Draft the next high-signal maintainer comment for this pull request" \
             --issue_snapshot "$(cat "$GITHUB_WORKSPACE/.artifacts/pr-triage/pr-snapshot.json")" \

@@ -51,7 +51,7 @@ jobs:
         with:
           repository: ${{ vars.RUNX_REPOSITORY || 'auscaster/runx' }}
           ref: ${{ vars.RUNX_REF || 'main' }}
-          path: runx
+          path: .runx/runx
 
       - name: Set up Node.js
         if: ${{ steps.preflight.outputs.enabled == 'true' }}
@@ -66,8 +66,8 @@ jobs:
       - name: Install and build runx
         if: ${{ steps.preflight.outputs.enabled == 'true' }}
         run: |
-          pnpm --dir runx install --no-frozen-lockfile
-          pnpm --dir runx build
+          pnpm --dir .runx/runx install --no-frozen-lockfile
+          pnpm --dir .runx/runx build
 
       - name: Configure git author
         if: ${{ steps.preflight.outputs.enabled == 'true' }}
@@ -84,12 +84,12 @@ jobs:
         run: |
           mkdir -p .artifacts/skill-learning
           node scripts/runx-agent-bridge.mjs \
-            --runx-root "$GITHUB_WORKSPACE/runx" \
+            --runx-root "$GITHUB_WORKSPACE/.runx/runx" \
             --receipt-dir "$GITHUB_WORKSPACE/.artifacts/skill-learning/receipts" \
             --trace-dir "$GITHUB_WORKSPACE/.artifacts/skill-learning/provider-trace" \
             --output "$GITHUB_WORKSPACE/.artifacts/skill-learning/result.json" \
             -- \
-            skill "$GITHUB_WORKSPACE/runx/skills/objective-to-skill" \
+            skill "$GITHUB_WORKSPACE/.runx/runx/skills/objective-to-skill" \
             --objective "$ISSUE_TITLE" \
             --project_context "$ISSUE_BODY"
 

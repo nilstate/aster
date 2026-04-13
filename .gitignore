@@ -1,5 +1,6 @@
 node_modules/
 .runx/
+runx/
 .artifacts/
 .sourcey/
 

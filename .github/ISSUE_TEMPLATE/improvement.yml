@@ -1,8 +1,6 @@
 name: Improvement
 description: Propose a bounded improvement for automaton or one of its runx lanes.
 title: "[improvement] "
-labels:
-  - improvement
 body:
   - type: textarea
     id: objective
@@ -22,4 +20,3 @@ body:
     attributes:
       label: Safety Notes
       description: What should stay approval-gated or out of scope?
-

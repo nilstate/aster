@@ -1,0 +1,163 @@
+name: issue-to-pr
+
+on:
+  issues:
+    types:
+      - opened
+      - edited
+      - reopened
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+concurrency:
+  group: issue-to-pr-${{ github.event.issue.number }}
+  cancel-in-progress: true
+
+jobs:
+  issue-to-pr:
+    if: ${{ startsWith(github.event.issue.title, '[issue-to-pr]') && secrets.OPENAI_API_KEY != '' }}
+    runs-on: ubuntu-latest
+    env:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      RUNX_CALLER_MODEL: ${{ vars.RUNX_CALLER_MODEL || 'gpt-4o-2024-08-06' }}
+    steps:
+      - name: Check out automaton
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check out runx
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ vars.RUNX_REPOSITORY || 'auscaster/runx' }}
+          ref: ${{ vars.RUNX_REF || 'main' }}
+          path: runx
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Enable corepack
+        run: corepack enable
+
+      - name: Install and build runx
+        run: |
+          pnpm --dir runx install --no-frozen-lockfile
+          pnpm --dir runx build
+
+      - name: Install scafld
+        run: |
+          curl -fsSL https://raw.githubusercontent.com/nilstate/scafld/main/install.sh | sh
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Configure git author
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Run issue-to-pr lane
+        run: |
+          mkdir -p .artifacts/issue-to-pr
+          ISSUE_URL="${{ github.event.issue.html_url }}"
+          node scripts/runx-agent-bridge.mjs \
+            --runx-root "$GITHUB_WORKSPACE/runx" \
+            --receipt-dir "$GITHUB_WORKSPACE/.artifacts/issue-to-pr/triage-receipts" \
+            --trace-dir "$GITHUB_WORKSPACE/.artifacts/issue-to-pr/triage-provider-trace" \
+            --output "$GITHUB_WORKSPACE/.artifacts/issue-to-pr/triage-result.json" \
+            -- \
+            skill "$GITHUB_WORKSPACE/runx/skills/support-triage" \
+            --title "${{ github.event.issue.title }}" \
+            --body "${{ github.event.issue.body }}" \
+            --source "github_issue" \
+            --source_id "${{ github.event.issue.number }}" \
+            --source_url "$ISSUE_URL" \
+            --product_context "automaton public dogfood repository" \
+            --operator_context "Prefer one bounded repo change. If the request is ambiguous, risky, or mostly informational, do not route it to issue-to-pr."
+          node scripts/prepare-issue-to-pr-request.mjs \
+            --input "$GITHUB_WORKSPACE/.artifacts/issue-to-pr/triage-result.json" \
+            --output "$GITHUB_WORKSPACE/.artifacts/issue-to-pr/triage-decision.json"
+          if [ "$(jq -r '.mode' "$GITHUB_WORKSPACE/.artifacts/issue-to-pr/triage-decision.json")" != "issue-to-pr" ]; then
+            exit 0
+          fi
+          ISSUE_TITLE="$(jq -r '.issue_to_pr_request.issue_title' "$GITHUB_WORKSPACE/.artifacts/issue-to-pr/triage-decision.json")"
+          ISSUE_BODY="$(jq -r '.issue_to_pr_request.issue_body' "$GITHUB_WORKSPACE/.artifacts/issue-to-pr/triage-decision.json")"
+          ISSUE_SIZE="$(jq -r '.issue_to_pr_request.size' "$GITHUB_WORKSPACE/.artifacts/issue-to-pr/triage-decision.json")"
+          ISSUE_RISK="$(jq -r '.issue_to_pr_request.risk' "$GITHUB_WORKSPACE/.artifacts/issue-to-pr/triage-decision.json")"
+          node scripts/runx-agent-bridge.mjs \
+            --runx-root "$GITHUB_WORKSPACE/runx" \
+            --receipt-dir "$GITHUB_WORKSPACE/.artifacts/issue-to-pr/receipts" \
+            --trace-dir "$GITHUB_WORKSPACE/.artifacts/issue-to-pr/provider-trace" \
+            --output "$GITHUB_WORKSPACE/.artifacts/issue-to-pr/result.json" \
+            -- \
+            skill "$GITHUB_WORKSPACE/runx/skills/issue-to-pr" \
+            --fixture "$GITHUB_WORKSPACE" \
+            --task_id "issue-${{ github.event.issue.number }}" \
+            --issue_title "$ISSUE_TITLE" \
+            --issue_body "$ISSUE_BODY" \
+            --source "github_issue" \
+            --source_id "${{ github.event.issue.number }}" \
+            --source_url "$ISSUE_URL" \
+            --target_repo "${{ github.repository }}" \
+            --size "$ISSUE_SIZE" \
+            --risk "$ISSUE_RISK" \
+            --phase "phase1" \
+            --scafld_bin "$HOME/.local/bin/scafld"
+
+      - name: Comment when triage chooses a non-PR lane
+        if: ${{ always() }}
+        run: |
+          if [ ! -f ".artifacts/issue-to-pr/triage-decision.json" ]; then
+            exit 0
+          fi
+          if [ "$(jq -r '.mode' .artifacts/issue-to-pr/triage-decision.json)" = "issue-to-pr" ]; then
+            exit 0
+          fi
+          gh issue comment "${{ github.event.issue.number }}" \
+            --repo "${{ github.repository }}" \
+            --body "$(jq -r '.comment_body' .artifacts/issue-to-pr/triage-decision.json)"
+
+      - name: Validate repo after issue lane
+        if: ${{ hashFiles('.artifacts/issue-to-pr/result.json') != '' }}
+        run: npm run docs:ci
+
+      - name: Write PR body
+        if: ${{ hashFiles('.artifacts/issue-to-pr/result.json') != '' }}
+        run: |
+          cat > .artifacts/issue-to-pr/pr-body.md <<EOF
+          ## Summary
+
+          This draft PR was opened by the \`automaton\` issue-to-PR lane.
+
+          - Source issue: #${{ github.event.issue.number }}
+          - Issue URL: ${{ github.event.issue.html_url }}
+          - Lane: \`support-triage -> issue-to-pr\`
+          - scafld task: \`issue-${{ github.event.issue.number }}\`
+
+          ## Validation
+
+          - \`npm run check\`
+          - \`npm run docs:build\`
+          - scafld review completed before PR publication
+          - receipts uploaded with this workflow run
+          EOF
+
+      - name: Publish draft PR
+        if: ${{ hashFiles('.artifacts/issue-to-pr/result.json') != '' }}
+        run: |
+          node scripts/publish-runx-pr.mjs \
+            --repo "${{ github.repository }}" \
+            --branch "runx/issue-${{ github.event.issue.number }}" \
+            --title "[runx] resolve issue #${{ github.event.issue.number }}" \
+            --commit-message "feat(issue): resolve #${{ github.event.issue.number }}" \
+            --body-file ".artifacts/issue-to-pr/pr-body.md" \
+            --issue-number "${{ github.event.issue.number }}"
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue-to-pr-${{ github.event.issue.number }}
+          path: .artifacts/issue-to-pr

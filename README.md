@@ -18,35 +18,59 @@ The story is:
 3. humans approve the next safe mutation
 4. `automaton` improves gradually, with receipts
 
-## Current Mode
+## Live Lanes
 
-Today `automaton` runs in draft-first mode.
+`automaton` now has four concrete dogfood lanes:
 
-- `evolve` inspects the repo and recommends the next bounded move
-- `sourcey` derives a docs-site plan from the real repo
-- `content-pipeline` and `market-intelligence` draft operator-facing updates
-- `skill-testing` evaluates whether key `runx` skills are strong enough to use on
-  `automaton`
+- `sourcey-refresh`: `runx sourcey` authors and revises the Sourcey docs source
+  bundle, then opens a draft PR
+- `issue-to-pr`: a GitHub issue submitted through the issue-to-PR template runs
+  through `support-triage` and `issue-to-pr`, then opens a draft PR
+- `pr-triage`: a live PR snapshot runs through `github-triage`, then the
+  workflow posts a maintainer comment back onto the PR
+- `skill-learning`: a skill proposal issue runs through
+  `objective-to-skill`, materializes a proposal in `docs/skill-proposals/`,
+  and opens a draft PR
 
-The live workflow stores JSON reports, pending caller envelopes, and receipts as
-workflow artifacts. That gives a real operating signal now, even before every
-agent step is wired for unattended completion in CI.
+Two supporting lanes stay valuable even when the external caller is offline:
+
+- `docs-pages`: builds and deploys the Sourcey site from committed docs sources
+- `runx-dogfood`: keeps a draft-first receipt trail for the broader catalog
+
+## Required Secrets
+
+`automaton` needs only a small hosted secret surface:
+
+- `OPENAI_API_KEY`: external caller for `runx` `agent-step` boundaries
+- `RUNX_CALLER_MODEL` (optional): pinned model override for the hosted bridge
+- `RUNX_REF` (repo variable): optional `runx` branch or tag for hosted
+  checkouts; defaults to `main`
+- `RUNX_WORKSPACE_PAT` (legacy): only needed if the workflow checks out a
+  private runx ref; public `auscaster/runx` checkouts do not require it
+
+Without `OPENAI_API_KEY`, the mutation-capable lanes stay intentionally idle and
+the draft-first observability lanes continue to run.
 
 ## Layout
 
-- [docs/operating-model.md](./docs/operating-model.md): the governing model for
+- [docs/operating-model.md](./docs/operating-model.md): the governance model for
   gradual self-improvement
-- [docs/run-catalog.md](./docs/run-catalog.md): which `runx` lanes operate on
-  `automaton` and what they should emit
-- [docs/backlog.md](./docs/backlog.md): bounded improvement targets for future
-  evolve runs
-- [scripts/runx-dogfood.sh](./scripts/runx-dogfood.sh): local and CI driver for
-  live dogfood runs
+- [docs/run-catalog.md](./docs/run-catalog.md): each hosted lane, trigger, and
+  emitted artifact
+- [docs/backlog.md](./docs/backlog.md): the next bounded improvements worth
+  pursuing
+- [docs/sourcey.config.ts](./docs/sourcey.config.ts): Sourcey config for the
+  public docs site
+- [scripts/runx-agent-bridge.mjs](./scripts/runx-agent-bridge.mjs): external
+  caller that answers `runx` `agent-step` requests without internal shortcuts
+- [scripts/publish-runx-pr.mjs](./scripts/publish-runx-pr.mjs): reusable draft
+  PR publisher for generated repo changes
 
 ## Local Validation
 
 ```bash
-node scripts/check.mjs
+npm run check
+npm run docs:build
 ```
 
 Run the live dogfood lane locally from this repo:
@@ -56,8 +80,22 @@ RUNX_ROOT=/home/kam/dev/runx bash scripts/runx-dogfood.sh
 node scripts/summarize-dogfood.mjs .artifacts/runx-dogfood
 ```
 
-If you have caller answers for a given run, place one JSON file per run name in
-`$RUNX_ANSWERS_DIR`:
+Run a real `runx` lane through the external caller bridge:
+
+```bash
+OPENAI_API_KEY=... \
+RUNX_ROOT=/home/kam/dev/runx \
+node scripts/runx-agent-bridge.mjs \
+  --runx-root /home/kam/dev/runx \
+  --receipt-dir .artifacts/sourcey-refresh \
+  --approve sourcey.discovery.approval \
+  -- \
+  skill /home/kam/dev/runx/oss/skills/sourcey \
+  --project /home/kam/dev/automaton
+```
+
+If you have prerecorded caller answers for a given dogfood run, place one JSON
+file per run name in `$RUNX_ANSWERS_DIR`:
 
 ```text
 $RUNX_ANSWERS_DIR/
@@ -68,4 +106,3 @@ $RUNX_ANSWERS_DIR/
 
 The script will pick those up automatically and continue past the normal
 `needs_resolution` boundary for that run.
-

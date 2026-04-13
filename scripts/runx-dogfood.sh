@@ -6,13 +6,25 @@ RUNX_ROOT="${RUNX_ROOT:?set RUNX_ROOT to the runx workspace root}"
 ARTIFACT_DIR="${ARTIFACT_DIR:-$AUTOMATON_ROOT/.artifacts/runx-dogfood}"
 RUNX_ANSWERS_DIR="${RUNX_ANSWERS_DIR:-}"
 RUNX_DOGFOOD_PROFILE="${RUNX_DOGFOOD_PROFILE:-full}"
-CLI_BIN="$RUNX_ROOT/oss/packages/cli/dist/index.js"
+
+if [[ -f "$RUNX_ROOT/packages/cli/dist/index.js" ]]; then
+  RUNX_REPO_ROOT="$RUNX_ROOT"
+elif [[ -f "$RUNX_ROOT/oss/packages/cli/dist/index.js" ]]; then
+  RUNX_REPO_ROOT="$RUNX_ROOT/oss"
+else
+  echo "missing runx CLI build under $RUNX_ROOT" >&2
+  echo "expected packages/cli/dist/index.js or oss/packages/cli/dist/index.js" >&2
+  exit 1
+fi
+
+CLI_BIN="$RUNX_REPO_ROOT/packages/cli/dist/index.js"
+SKILLS_ROOT="$RUNX_REPO_ROOT/skills"
 
 mkdir -p "$ARTIFACT_DIR"
 
 if [[ ! -f "$CLI_BIN" ]]; then
   echo "missing runx CLI build at $CLI_BIN" >&2
-  echo "run: pnpm --dir \"$RUNX_ROOT/oss\" build" >&2
+  echo "run: pnpm --dir \"$RUNX_REPO_ROOT\" build" >&2
   exit 1
 fi
 
@@ -47,12 +59,12 @@ run_json evolve-introspect \
   --repo_root "$AUTOMATON_ROOT"
 
 run_json sourcey \
-  skill "$RUNX_ROOT/oss/skills/sourcey" \
+  skill "$SKILLS_ROOT/sourcey" \
   --project "$AUTOMATON_ROOT"
 
 if [[ "$RUNX_DOGFOOD_PROFILE" != "minimal" ]]; then
   run_json content-pipeline \
-    skill "$RUNX_ROOT/oss/skills/content-pipeline" \
+    skill "$SKILLS_ROOT/content-pipeline" \
     --objective "Draft the next automaton operator update from repo evidence" \
     --audience operators \
     --domain "oss repo operations" \
@@ -61,7 +73,7 @@ if [[ "$RUNX_DOGFOOD_PROFILE" != "minimal" ]]; then
     --target_entities runx
 
   run_json market-intelligence \
-    skill "$RUNX_ROOT/oss/skills/market-intelligence" \
+    skill "$SKILLS_ROOT/market-intelligence" \
     --objective "Identify the highest-signal change in the automaton repo this week" \
     --audience operators \
     --domain "oss repo operations" \
@@ -70,13 +82,13 @@ if [[ "$RUNX_DOGFOOD_PROFILE" != "minimal" ]]; then
     --target_entities runx
 
   run_json skill-testing \
-    skill "$RUNX_ROOT/oss/skills/skill-testing" \
-    --skill_ref "$RUNX_ROOT/oss/skills/sourcey" \
+    skill "$SKILLS_ROOT/skill-testing" \
+    --skill_ref "$SKILLS_ROOT/sourcey" \
     --objective "Assess whether sourcey is strong enough to document automaton safely" \
     --test_constraints "Use repo-local evidence and inline harness receipts only."
 
   run_json research \
-    skill "$RUNX_ROOT/oss/skills/research" \
+    skill "$SKILLS_ROOT/research" \
     --objective "Identify the next highest-leverage improvement for automaton" \
     --domain "oss repo operations" \
     --deliverable "operator brief" \

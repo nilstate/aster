@@ -1,0 +1,113 @@
+name: skill-learning
+
+on:
+  issues:
+    types:
+      - opened
+      - edited
+      - reopened
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+concurrency:
+  group: skill-learning-${{ github.event.issue.number }}
+  cancel-in-progress: true
+
+jobs:
+  skill-learning:
+    if: ${{ startsWith(github.event.issue.title, '[skill]') && secrets.OPENAI_API_KEY != '' }}
+    runs-on: ubuntu-latest
+    env:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      RUNX_CALLER_MODEL: ${{ vars.RUNX_CALLER_MODEL || 'gpt-4o-2024-08-06' }}
+    steps:
+      - name: Check out automaton
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check out runx
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ vars.RUNX_REPOSITORY || 'auscaster/runx' }}
+          ref: ${{ vars.RUNX_REF || 'main' }}
+          path: runx
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Enable corepack
+        run: corepack enable
+
+      - name: Install and build runx
+        run: |
+          pnpm --dir runx install --no-frozen-lockfile
+          pnpm --dir runx build
+
+      - name: Configure git author
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Run objective-to-skill
+        run: |
+          mkdir -p .artifacts/skill-learning
+          node scripts/runx-agent-bridge.mjs \
+            --runx-root "$GITHUB_WORKSPACE/runx" \
+            --receipt-dir "$GITHUB_WORKSPACE/.artifacts/skill-learning/receipts" \
+            --trace-dir "$GITHUB_WORKSPACE/.artifacts/skill-learning/provider-trace" \
+            --output "$GITHUB_WORKSPACE/.artifacts/skill-learning/result.json" \
+            -- \
+            skill "$GITHUB_WORKSPACE/runx/skills/objective-to-skill" \
+            --objective "${{ github.event.issue.title }}" \
+            --project_context "${{ github.event.issue.body }}"
+
+      - name: Materialize proposal
+        run: |
+          node scripts/write-skill-proposal.mjs \
+            --input ".artifacts/skill-learning/result.json" \
+            --title "${{ github.event.issue.title }}" \
+            --issue-url "${{ github.event.issue.html_url }}"
+
+      - name: Validate repo after skill proposal
+        run: npm run docs:ci
+
+      - name: Write PR body
+        run: |
+          cat > .artifacts/skill-learning/pr-body.md <<EOF
+          ## Summary
+
+          This draft PR was opened by the \`automaton\` skill-learning lane.
+
+          - Source issue: #${{ github.event.issue.number }}
+          - Issue URL: ${{ github.event.issue.html_url }}
+          - Lane: \`objective-to-skill\`
+          - Output: generated proposal under \`docs/skill-proposals/\`
+
+          ## Validation
+
+          - \`npm run check\`
+          - \`npm run docs:build\`
+          - receipts uploaded with this workflow run
+          EOF
+
+      - name: Publish draft PR
+        run: |
+          node scripts/publish-runx-pr.mjs \
+            --repo "${{ github.repository }}" \
+            --branch "runx/skill-${{ github.event.issue.number }}" \
+            --title "[runx] skill proposal #${{ github.event.issue.number }}" \
+            --commit-message "docs(skill): propose skill #${{ github.event.issue.number }}" \
+            --body-file ".artifacts/skill-learning/pr-body.md" \
+            --issue-number "${{ github.event.issue.number }}"
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: skill-learning-${{ github.event.issue.number }}
+          path: .artifacts/skill-learning

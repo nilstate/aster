@@ -36,6 +36,12 @@ Public or mutating work stays gated:
 - public posts require explicit approval
 - PR creation requires explicit approval
 
+In practice, `automaton` uses three approval shapes:
+
+1. issue or PR template choice: the operator chooses the lane explicitly
+2. workflow-level gate: only specific workflows auto-approve named `runx` gates
+3. PR review: the generated branch still lands through normal GitHub review
+
 This repo exists to prove governed automation, not to bypass it.
 
 ### 4. Apply
@@ -50,6 +56,14 @@ That progression should be gradual:
 3. local patch application in isolated branches
 4. PR publication after review
 
+`automaton` now uses that progression concretely:
+
+- `docs-pages` publishes the static Sourcey site from committed docs sources
+- `sourcey-refresh` opens a PR with runx-authored docs/config updates
+- `issue-to-pr` turns a bounded issue into a scafld-governed draft PR
+- `pr-triage` comments on open PRs with a runx-authored maintainer response
+- `skill-learning` turns a skill proposal issue into a concrete skill-design PR
+
 ## Safety Defaults
 
 - one run should end in a bounded artifact
@@ -58,3 +72,12 @@ That progression should be gradual:
   is explicitly supplied
 - approvals should remain first-class and human-visible
 
+## Missing Pieces
+
+These are still explicit gaps rather than hidden assumptions:
+
+- model-provider secret management and rotation
+- replay and dedupe for repeated issue or PR events
+- a merge policy for automatically generated PRs
+- first-class evals for comment quality and PR usefulness
+- a rollback lane when a generated PR or comment proves harmful

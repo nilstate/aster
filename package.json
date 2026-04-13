@@ -8,7 +8,8 @@
     "node": ">=20"
   },
   "scripts": {
-    "check": "node scripts/check.mjs"
+    "check": "node scripts/check.mjs",
+    "docs:build": "npx -y sourcey build --config docs/sourcey.config.ts -o .sourcey/runx-docs",
+    "docs:ci": "npm run check && npm run docs:build"
   }
 }
-

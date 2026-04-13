@@ -5,10 +5,10 @@ content runs.
 
 ## Current Gaps
 
-- the repo should eventually expose a small public landing page
-- live dogfood reports should roll up into one concise operator summary
-- issue templates should capture clearer objective and safety context
-- the docs should explain when a run is draft-only versus mutation-capable
-- CI should eventually publish run summaries somewhere more visible than
-  workflow artifacts
-
+- the Sourcey site should publish a machine-readable run catalog and receipt map
+- PR triage should evolve from one comment into structured review-check output
+- issue-to-pr should learn to classify `reply-only` and `manual-triage`
+  requests without opening empty PRs
+- skill-learning should upgrade from proposal docs to bounded runx skill PRs
+- draft-only dogfood runs should roll up into one concise operator dashboard
+- workflow receipts should eventually land in a persistent, queryable store

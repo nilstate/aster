@@ -1,0 +1,59 @@
+export default {
+  name: "automaton",
+  repo: "https://github.com/auscaster/automaton",
+  editBranch: "main",
+  editBasePath: "docs",
+  theme: {
+    preset: "default",
+    colors: {
+      primary: "#0f766e",
+      light: "#14b8a6",
+      dark: "#115e59",
+    },
+    fonts: {
+      sans: "'IBM Plex Sans', sans-serif",
+      mono: "'IBM Plex Mono', monospace",
+    },
+  },
+  navigation: {
+    tabs: [
+      {
+        tab: "Automaton",
+        groups: [
+          {
+            group: "Start",
+            pages: ["introduction", "dogfood"],
+          },
+          {
+            group: "Operate",
+            pages: ["flows", "operations"],
+          },
+        ],
+      },
+    ],
+  },
+  navbar: {
+    links: [
+      {
+        type: "github",
+        href: "https://github.com/auscaster/automaton",
+      },
+    ],
+    primary: {
+      type: "button",
+      label: "View Repo",
+      href: "https://github.com/auscaster/automaton",
+    },
+  },
+  footer: {
+    links: [
+      {
+        type: "github",
+        href: "https://github.com/auscaster/automaton",
+      },
+    ],
+  },
+  search: {
+    featured: ["introduction", "flows"],
+  },
+};

@@ -1,4 +1,9 @@
 node_modules/
 .runx/
 .artifacts/
+.sourcey/
 
+
+# scafld
+.ai/logs/
+.ai/reviews/

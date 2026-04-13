@@ -1,0 +1,104 @@
+name: sourcey-refresh
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "43 3 * * *"
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: sourcey-refresh
+  cancel-in-progress: false
+
+jobs:
+  sourcey-refresh:
+    if: ${{ secrets.OPENAI_API_KEY != '' }}
+    runs-on: ubuntu-latest
+    env:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      RUNX_CALLER_MODEL: ${{ vars.RUNX_CALLER_MODEL || 'gpt-4o-2024-08-06' }}
+    steps:
+      - name: Check out automaton
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check out runx
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ vars.RUNX_REPOSITORY || 'auscaster/runx' }}
+          ref: ${{ vars.RUNX_REF || 'main' }}
+          path: runx
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Enable corepack
+        run: corepack enable
+
+      - name: Install and build runx
+        run: |
+          pnpm --dir runx install --no-frozen-lockfile
+          pnpm --dir runx build
+
+      - name: Install Sourcey CLI
+        run: npm install -g sourcey
+
+      - name: Configure git author
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Run sourcey through runx
+        run: |
+          mkdir -p .artifacts/sourcey-refresh
+          node scripts/runx-agent-bridge.mjs \
+            --runx-root "$GITHUB_WORKSPACE/runx" \
+            --receipt-dir "$GITHUB_WORKSPACE/.artifacts/sourcey-refresh/receipts" \
+            --trace-dir "$GITHUB_WORKSPACE/.artifacts/sourcey-refresh/provider-trace" \
+            --output "$GITHUB_WORKSPACE/.artifacts/sourcey-refresh/result.json" \
+            --approve sourcey.discovery.approval \
+            -- \
+            skill "$GITHUB_WORKSPACE/runx/skills/sourcey" \
+            --project "$GITHUB_WORKSPACE"
+
+      - name: Validate repo after sourcey refresh
+        run: npm run docs:ci
+
+      - name: Write PR body
+        run: |
+          cat > .artifacts/sourcey-refresh/pr-body.md <<'EOF'
+          ## Summary
+
+          This draft PR was opened by the `automaton` Sourcey refresh lane.
+
+          - Lane: `runx sourcey`
+          - Scope: bounded docs/config refresh for this repository
+          - Receipts: uploaded as workflow artifacts for this run
+
+          ## Validation
+
+          - `npm run check`
+          - `npm run docs:build`
+          - `runx` receipts captured in `.artifacts/sourcey-refresh`
+          EOF
+
+      - name: Publish draft PR
+        run: |
+          node scripts/publish-runx-pr.mjs \
+            --repo "${{ github.repository }}" \
+            --branch "runx/sourcey-refresh" \
+            --title "[runx] refresh Sourcey docs" \
+            --commit-message "docs(sourcey): refresh docs source" \
+            --body-file ".artifacts/sourcey-refresh/pr-body.md"
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: sourcey-refresh
+          path: .artifacts/sourcey-refresh

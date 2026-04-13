@@ -18,6 +18,8 @@ jobs:
         with:
           node-version: 20
 
-      - name: Run repo check
-        run: node scripts/check.mjs
+      - name: Run repo checks
+        run: npm run check
 
+      - name: Build Sourcey docs
+        run: npm run docs:build

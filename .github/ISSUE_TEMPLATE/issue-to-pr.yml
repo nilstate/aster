@@ -1,0 +1,31 @@
+name: Issue to PR
+description: Submit one bounded repo change that automaton should attempt to turn into a draft PR.
+title: "[issue-to-pr] "
+body:
+  - type: textarea
+    id: objective
+    attributes:
+      label: Objective
+      description: Describe the single bounded change that should land as a PR.
+      placeholder: Update the docs so the live flows page explains the skill-learning lane.
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance Criteria
+      description: What must be true before the draft PR is useful?
+      placeholder: The docs mention the new workflow, the Sourcey site still builds, and no unrelated files change.
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Context
+      description: Relevant file paths, receipts, or repo context.
+  - type: textarea
+    id: safety
+    attributes:
+      label: Safety Constraints
+      description: What must stay out of scope or approval-gated?
+      placeholder: No secret handling changes. Keep the change docs-only.

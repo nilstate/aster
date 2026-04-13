@@ -1,0 +1,29 @@
+name: Skill Proposal
+description: Propose a new runx skill or lane that automaton should learn.
+title: "[skill] "
+body:
+  - type: textarea
+    id: objective
+    attributes:
+      label: Objective
+      description: What new capability should exist?
+      placeholder: Add a weekly operator-brief lane that turns receipts into one concise update.
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: Why It Matters
+      description: Why should this become a governed skill instead of a manual checklist?
+    validations:
+      required: true
+  - type: textarea
+    id: constraints
+    attributes:
+      label: Constraints
+      description: Governance boundaries, target channels, or out-of-scope actions.
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence
+      description: Receipts, examples, or workflows that motivate the new skill.

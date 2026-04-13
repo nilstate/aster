@@ -18,9 +18,9 @@ jobs:
       - name: Check out runx OSS
         uses: actions/checkout@v4
         with:
-          repository: auscaster/runx
-          path: runx/oss
-          token: ${{ secrets.RUNX_WORKSPACE_PAT }}
+          repository: ${{ vars.RUNX_REPOSITORY || 'auscaster/runx' }}
+          ref: ${{ vars.RUNX_REF || 'main' }}
+          path: runx
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -32,8 +32,8 @@ jobs:
 
       - name: Install and build runx
         run: |
-          pnpm --dir runx/oss install --no-frozen-lockfile
-          pnpm --dir runx/oss build
+          pnpm --dir runx install --no-frozen-lockfile
+          pnpm --dir runx build
 
       - name: Run live dogfood lane
         env:

@@ -1,0 +1,19 @@
+validation:
+  per_phase:
+    compile_check: "npm run check"
+    targeted_tests: "npm run docs:build"
+  pre_commit:
+    full_test_suite: "npm run docs:ci"
+    linter_suite: "npm run check"
+    typecheck: "node --check scripts/runx-agent-bridge.mjs"
+
+tech_stack:
+  backend:
+    language: "Node.js 20"
+    framework: "GitHub Actions automation"
+  frontend:
+    framework: "Sourcey static docs"
+
+repo_layout:
+  backend: "scripts/"
+  frontend: "docs/"

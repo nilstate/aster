@@ -239,20 +239,13 @@ async function resolveCognitiveWork({ provider, model, reasoningEffort, request,
   const requestTimeoutMs = Number(process.env.RUNX_CALLER_REQUEST_TIMEOUT_MS ?? "1200000");
 
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
-    const payload = {
-      model,
-      input: buildInputMessages(request, expectedOutputs, previousFailure),
-      reasoning: {
-        effort: reasoningEffort,
-      },
-      text: {
-        format: {
-          type: "json_object",
-        },
-      },
-    };
+    const messages = buildInputMessages(request, expectedOutputs, previousFailure);
+    const payload = buildResponsesPayload({ model, messages, reasoningEffort });
 
     let response;
+    let requestPayload = payload;
+    let requestApi = "responses";
+    let initialFailure;
     try {
       response = await postJson("https://api.openai.com/v1/responses", {
         headers: {
@@ -285,12 +278,40 @@ async function resolveCognitiveWork({ provider, model, reasoningEffort, request,
       throw error;
     }
 
-    const raw = response.body;
-    const parsed = safeJsonParse(raw);
+    let raw = response.body;
+    let parsed = safeJsonParse(raw);
+
+    if (shouldFallbackToChatCompletions({ response, parsed })) {
+      initialFailure = {
+        api: requestApi,
+        statusCode: response.statusCode,
+        statusMessage: response.statusMessage,
+        raw,
+      };
+      requestApi = "chat_completions";
+      requestPayload = buildChatCompletionsPayload({ model, messages });
+      response = await postJson("https://api.openai.com/v1/chat/completions", {
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+          "X-Client-Request-Id": `${requestId}-${attempt}-fallback`.slice(0, 128),
+        },
+        body: JSON.stringify(requestPayload),
+        timeoutMs: requestTimeoutMs,
+      });
+      raw = response.body;
+      parsed = safeJsonParse(raw);
+    }
 
     await writeFile(
       path.join(traceDir, `${requestId}-attempt-${attempt}.json`),
-      `${JSON.stringify({ request: payload, response: parsed, raw_response: raw }, null, 2)}\n`,
+      `${JSON.stringify({
+        request_api: requestApi,
+        request: requestPayload,
+        response: parsed,
+        raw_response: raw,
+        initial_failure: initialFailure,
+      }, null, 2)}\n`,
     );
 
     if (response.statusCode < 200 || response.statusCode >= 300) {
@@ -332,6 +353,31 @@ async function resolveCognitiveWork({ provider, model, reasoningEffort, request,
   throw new Error(
     `OpenAI response for ${request.id} did not satisfy the expected output contract after ${maxAttempts} attempts: ${previousFailure}`,
   );
+}
+
+function buildResponsesPayload({ model, messages, reasoningEffort }) {
+  return {
+    model,
+    input: messages,
+    reasoning: {
+      effort: reasoningEffort,
+    },
+    text: {
+      format: {
+        type: "json_object",
+      },
+    },
+  };
+}
+
+function buildChatCompletionsPayload({ model, messages }) {
+  return {
+    model,
+    messages,
+    response_format: {
+      type: "json_object",
+    },
+  };
 }
 
 function postJson(url, { headers, body, timeoutMs }) {
@@ -481,11 +527,19 @@ function truncate(value, maxLength) {
   return `${value.slice(0, maxLength)}...`;
 }
 
-function extractOutputTextCandidates(response) {
+export function extractOutputTextCandidates(response) {
   const ranked = [[], [], []];
 
   if (typeof response.output_text === "string" && response.output_text.trim()) {
     ranked[0].push(response.output_text.trim());
+  }
+
+  const choices = Array.isArray(response.choices) ? response.choices : [];
+  for (const choice of choices) {
+    const content = choice?.message?.content;
+    if (typeof content === "string" && content.trim()) {
+      ranked[0].push(content.trim());
+    }
   }
 
   const outputItems = Array.isArray(response.output) ? response.output : [];
@@ -548,6 +602,19 @@ function sanitizeTraceName(value) {
   return value.replace(/[^a-zA-Z0-9_.-]+/g, "_");
 }
 
+export function shouldFallbackToChatCompletions({ response, parsed }) {
+  if (process.env.RUNX_DISABLE_CHAT_COMPLETIONS_FALLBACK === "true") {
+    return false;
+  }
+
+  if (response?.statusCode !== 401) {
+    return false;
+  }
+
+  const message = String(parsed?.error?.message ?? "");
+  return /api\.responses\.write|insufficient permissions/i.test(message);
+}
+
 function isRetryableTransportError(error) {
   const code = String(error?.cause?.code ?? error?.code ?? "");
   return [
@@ -583,4 +650,6 @@ function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-await main();
+if (process.argv[1] && import.meta.url === new URL(`file://${process.argv[1]}`).href) {
+  await main();
+}

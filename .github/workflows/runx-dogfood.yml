@@ -54,7 +54,7 @@ jobs:
         run: cat "${{ github.workspace }}/automaton-artifacts/summary.md" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload dogfood artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: automaton-dogfood
           path: ${{ github.workspace }}/automaton-artifacts

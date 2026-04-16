@@ -154,7 +154,7 @@ jobs:
 
       - name: Upload artifacts
         if: ${{ always() && steps.preflight.outputs.enabled == 'true' }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: skill-learning-${{ github.event.issue.number }}
           path: .artifacts/skill-learning

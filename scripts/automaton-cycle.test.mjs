@@ -7,40 +7,73 @@ import { mkdtemp, mkdir, writeFile } from "node:fs/promises";
 import {
   buildDispatchPlan,
   discoverOpportunities,
-  loadScoringPolicy,
+  loadSelectionPolicy,
   runAutomatonCycle,
   scoreOpportunities,
   selectOpportunity,
 } from "./automaton-cycle.mjs";
 
-test("loadScoringPolicy parses weights, thresholds, and cooldowns", async () => {
-  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "automaton-scoring-"));
-  const scoringPath = path.join(tempRoot, "SCORING.md");
-  await writeFile(
-    scoringPath,
-    [
-      "# Automaton Scoring Policy",
-      "",
-      "- `stranger_value`: `0.24`",
-      "- `proof_strength`: `0.24`",
-      "- `compounding_value`: `0.19`",
-      "- `tractability`: `0.16`",
-      "- `novelty`: `0.09`",
-      "- `maintenance_efficiency`: `0.08`",
-      "",
-      "- `stranger_value < 0.60`",
-      "- `proof_strength < 0.70`",
-      "If the top non-vetoed candidate scores below `0.68`, prefer `no_op`.",
-      "",
-      "- `completed`, `success`, `merged`, `published`: `72h`",
-      "- `noop`, `ignored`, `stale`, `silence`: `7d`",
-      "- `rejected`, `corrected`: `21d`",
-      "- `failed`, `error`: `24h`",
-      "",
-    ].join("\n"),
-  );
+const baseSelectionPolicy = {
+  title: "Automaton Selection Policy",
+  version: 1,
+  updated: "2026-04-17",
+  weights: {
+    stranger_value: 0.24,
+    proof_strength: 0.24,
+    compounding_value: 0.19,
+    tractability: 0.16,
+    novelty: 0.09,
+    maintenance_efficiency: 0.08,
+  },
+  thresholds: {
+    stranger_value_min: 0.6,
+    proof_strength_min: 0.7,
+    minimum_select_score: 0.68,
+  },
+  cooldown_hours: {
+    success: 72,
+    ignored: 168,
+    rejected: 504,
+    severe: 2160,
+    failed: 24,
+  },
+  selection_contract: {
+    preferred_default: "no_op",
+    max_priority_queue: 3,
+    dispatch_count_per_cycle: 1,
+  },
+};
 
-  const policy = await loadScoringPolicy(scoringPath);
+async function writeSelectionPolicy(filePath, overrides = {}) {
+  const policy = {
+    ...baseSelectionPolicy,
+    ...overrides,
+    weights: {
+      ...baseSelectionPolicy.weights,
+      ...(overrides.weights ?? {}),
+    },
+    thresholds: {
+      ...baseSelectionPolicy.thresholds,
+      ...(overrides.thresholds ?? {}),
+    },
+    cooldown_hours: {
+      ...baseSelectionPolicy.cooldown_hours,
+      ...(overrides.cooldown_hours ?? {}),
+    },
+    selection_contract: {
+      ...baseSelectionPolicy.selection_contract,
+      ...(overrides.selection_contract ?? {}),
+    },
+  };
+  await writeFile(filePath, `${JSON.stringify(policy, null, 2)}\n`);
+}
+
+test("loadSelectionPolicy parses weights, thresholds, and cooldowns", async () => {
+  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "automaton-scoring-"));
+  const selectionPolicyPath = path.join(tempRoot, "selection-policy.json");
+  await writeSelectionPolicy(selectionPolicyPath);
+
+  const policy = await loadSelectionPolicy(selectionPolicyPath);
 
   assert.equal(policy.weights.stranger_value, 0.24);
   assert.equal(policy.thresholds.stranger_value_min, 0.6);
@@ -57,29 +90,7 @@ test("discover, score, and select curated external targets inside prerelease v1"
   await mkdir(path.join(repoRoot, "history"), { recursive: true });
   await mkdir(path.join(repoRoot, "reflections"), { recursive: true });
 
-  await writeFile(
-    path.join(repoRoot, "doctrine", "SCORING.md"),
-    [
-      "# Automaton Scoring Policy",
-      "",
-      "- `stranger_value`: `0.24`",
-      "- `proof_strength`: `0.24`",
-      "- `compounding_value`: `0.19`",
-      "- `tractability`: `0.16`",
-      "- `novelty`: `0.09`",
-      "- `maintenance_efficiency`: `0.08`",
-      "",
-      "- `stranger_value < 0.60`",
-      "- `proof_strength < 0.70`",
-      "If the top non-vetoed candidate scores below `0.68`, prefer `no_op`.",
-      "",
-      "- `completed`, `success`, `merged`, `published`: `72h`",
-      "- `noop`, `ignored`, `stale`, `silence`: `7d`",
-      "- `rejected`, `corrected`: `21d`",
-      "- `failed`, `error`: `24h`",
-      "",
-    ].join("\n"),
-  );
+  await writeSelectionPolicy(path.join(repoRoot, "state", "selection-policy.json"));
 
   await writeFile(
     path.join(repoRoot, "state", "targets", "nilstate-automaton.md"),
@@ -345,29 +356,7 @@ test("runAutomatonCycle vetoes candidates with an open operator-memory PR", asyn
   await mkdir(path.join(repoRoot, "history"), { recursive: true });
   await mkdir(path.join(repoRoot, "reflections"), { recursive: true });
 
-  await writeFile(
-    path.join(repoRoot, "doctrine", "SCORING.md"),
-    [
-      "# Automaton Scoring Policy",
-      "",
-      "- `stranger_value`: `0.24`",
-      "- `proof_strength`: `0.24`",
-      "- `compounding_value`: `0.19`",
-      "- `tractability`: `0.16`",
-      "- `novelty`: `0.09`",
-      "- `maintenance_efficiency`: `0.08`",
-      "",
-      "- `stranger_value < 0.60`",
-      "- `proof_strength < 0.70`",
-      "If the top non-vetoed candidate scores below `0.68`, prefer `no_op`.",
-      "",
-      "- `completed`, `success`, `merged`, `published`: `72h`",
-      "- `noop`, `ignored`, `stale`, `silence`: `7d`",
-      "- `rejected`, `corrected`: `21d`",
-      "- `failed`, `error`: `24h`",
-      "",
-    ].join("\n"),
-  );
+  await writeSelectionPolicy(path.join(repoRoot, "state", "selection-policy.json"));
 
   await writeFile(
     path.join(repoRoot, "state", "targets", "astral-sh-uv.md"),
@@ -450,29 +439,7 @@ test("runAutomatonCycle vetoes bot-authored dependency update pull requests", as
   await mkdir(path.join(repoRoot, "history"), { recursive: true });
   await mkdir(path.join(repoRoot, "reflections"), { recursive: true });
 
-  await writeFile(
-    path.join(repoRoot, "doctrine", "SCORING.md"),
-    [
-      "# Automaton Scoring Policy",
-      "",
-      "- `stranger_value`: `0.24`",
-      "- `proof_strength`: `0.24`",
-      "- `compounding_value`: `0.19`",
-      "- `tractability`: `0.16`",
-      "- `novelty`: `0.09`",
-      "- `maintenance_efficiency`: `0.08`",
-      "",
-      "- `stranger_value < 0.60`",
-      "- `proof_strength < 0.70`",
-      "If the top non-vetoed candidate scores below `0.68`, prefer `no_op`.",
-      "",
-      "- `completed`, `success`, `merged`, `published`: `72h`",
-      "- `noop`, `ignored`, `stale`, `silence`: `7d`",
-      "- `rejected`, `corrected`: `21d`",
-      "- `failed`, `error`: `24h`",
-      "",
-    ].join("\n"),
-  );
+  await writeSelectionPolicy(path.join(repoRoot, "state", "selection-policy.json"));
 
   await writeFile(
     path.join(repoRoot, "state", "targets", "astral-sh-uv.md"),
@@ -553,30 +520,7 @@ test("runAutomatonCycle vetoes PR comment candidates without a welcome signal", 
   await mkdir(path.join(repoRoot, "history"), { recursive: true });
   await mkdir(path.join(repoRoot, "reflections"), { recursive: true });
 
-  await writeFile(
-    path.join(repoRoot, "doctrine", "SCORING.md"),
-    [
-      "# Automaton Scoring Policy",
-      "",
-      "- `stranger_value`: `0.24`",
-      "- `proof_strength`: `0.24`",
-      "- `compounding_value`: `0.19`",
-      "- `tractability`: `0.16`",
-      "- `novelty`: `0.09`",
-      "- `maintenance_efficiency`: `0.08`",
-      "",
-      "- `stranger_value < 0.60`",
-      "- `proof_strength < 0.70`",
-      "If the top non-vetoed candidate scores below `0.68`, prefer `no_op`.",
-      "",
-      "- `completed`, `success`, `merged`, `published`: `72h`",
-      "- `noop`, `ignored`, `stale`, `silence`: `7d`",
-      "- `rejected`, `corrected`: `21d`",
-      "- `spam`, `minimized`, `harmful`: `90d`",
-      "- `failed`, `error`: `24h`",
-      "",
-    ].join("\n"),
-  );
+  await writeSelectionPolicy(path.join(repoRoot, "state", "selection-policy.json"));
 
   await writeFile(
     path.join(repoRoot, "state", "targets", "biomejs-biome.md"),
@@ -656,30 +600,7 @@ test("runAutomatonCycle enforces severe cooldown after a spam outcome", async ()
   await mkdir(path.join(repoRoot, "history"), { recursive: true });
   await mkdir(path.join(repoRoot, "reflections"), { recursive: true });
 
-  await writeFile(
-    path.join(repoRoot, "doctrine", "SCORING.md"),
-    [
-      "# Automaton Scoring Policy",
-      "",
-      "- `stranger_value`: `0.24`",
-      "- `proof_strength`: `0.24`",
-      "- `compounding_value`: `0.19`",
-      "- `tractability`: `0.16`",
-      "- `novelty`: `0.09`",
-      "- `maintenance_efficiency`: `0.08`",
-      "",
-      "- `stranger_value < 0.60`",
-      "- `proof_strength < 0.70`",
-      "If the top non-vetoed candidate scores below `0.68`, prefer `no_op`.",
-      "",
-      "- `completed`, `success`, `merged`, `published`: `72h`",
-      "- `noop`, `ignored`, `stale`, `silence`: `7d`",
-      "- `rejected`, `corrected`: `21d`",
-      "- `spam`, `minimized`, `harmful`: `90d`",
-      "- `failed`, `error`: `24h`",
-      "",
-    ].join("\n"),
-  );
+  await writeSelectionPolicy(path.join(repoRoot, "state", "selection-policy.json"));
 
   await writeFile(
     path.join(repoRoot, "state", "targets", "astral-sh-uv.md"),

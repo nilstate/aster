@@ -1,0 +1,67 @@
+{
+  "title": "Automaton Selection Policy",
+  "version": 1,
+  "updated": "2026-04-17",
+  "weights": {
+    "stranger_value": 0.24,
+    "proof_strength": 0.24,
+    "compounding_value": 0.19,
+    "tractability": 0.16,
+    "novelty": 0.09,
+    "maintenance_efficiency": 0.08
+  },
+  "thresholds": {
+    "stranger_value_min": 0.6,
+    "proof_strength_min": 0.7,
+    "minimum_select_score": 0.68
+  },
+  "cooldown_hours": {
+    "success": 72,
+    "ignored": 168,
+    "rejected": 504,
+    "severe": 2160,
+    "failed": 24
+  },
+  "selection_contract": {
+    "preferred_default": "no_op",
+    "max_priority_queue": 3,
+    "dispatch_count_per_cycle": 1
+  },
+  "public_comment_policy": {
+    "blocked_author_patterns": [
+      "[bot]",
+      "app/",
+      "renovate",
+      "dependabot",
+      "github-actions",
+      "github-actions[bot]"
+    ],
+    "blocked_head_ref_prefixes": [
+      "renovate/",
+      "dependabot/",
+      "runx/operator-memory-"
+    ],
+    "blocked_exact_labels": [
+      "dependencies",
+      "dependency",
+      "deps",
+      "rust dependencies",
+      "javascript dependencies",
+      "python dependencies",
+      "artifact drift",
+      "artifact-update",
+      "artifact update",
+      "internal"
+    ],
+    "blocked_label_prefixes": [
+      "build:",
+      "release:"
+    ],
+    "trust_recovery_statuses": [
+      "spam",
+      "minimized",
+      "harmful"
+    ],
+    "require_welcome_signal_for_pull_request_comments": true
+  }
+}

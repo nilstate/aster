@@ -107,7 +107,8 @@ That means:
 
 The philosophy is only real if it changes repo behavior.
 
-That is why the current live lanes map directly to the doctrine:
+That is why the live lanes must remain subordinate to the doctrine, even
+though the operational lane catalog now lives outside `doctrine/`:
 
 - `support-triage` makes issue routing public before mutation
 - `issue-triage` decides whether planning or a worker may start at all

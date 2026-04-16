@@ -108,12 +108,21 @@ the draft-first observability lanes continue to run.
 - [docs/architecture.md](./docs/architecture.md): the full-shape plan,
   ownership boundary, memory model, and site topology
 - [doctrine/AUTOMATON.md](./doctrine/AUTOMATON.md): the public thesis
-- [doctrine/GUARDRAILS.md](./doctrine/GUARDRAILS.md): constitutional safety and
-  truth constraints
-- [doctrine/LANES.md](./doctrine/LANES.md): the bounded lane catalog
+- [doctrine/CONDUCT.md](./doctrine/CONDUCT.md): how the operator should treat
+  people and attention
+- [doctrine/VOICE.md](./doctrine/VOICE.md): how public GitHub interaction
+  should sound
+- [doctrine/EPISTEMOLOGY.md](./doctrine/EPISTEMOLOGY.md): what counts as truth
+  and how memory stays subordinate to receipts
+- [doctrine/AUTHORITY.md](./doctrine/AUTHORITY.md): what the operator may do,
+  what requires review, and what is forbidden
+- [doctrine/EVOLUTION.md](./doctrine/EVOLUTION.md): the permitted order of
+  improvement
 - [state/priorities.md](./state/priorities.md): current operator priorities
 - [state/capabilities.md](./state/capabilities.md): current strengths, limits,
   and trust posture
+- [state/selection-policy.json](./state/selection-policy.json): machine-readable
+  weights, thresholds, cooldowns, and selection contract
 - [history/](./history): append-only public evolutionary record
 - [reflections/](./reflections): append-only diagnosis and interpretation layer
 - [site/](./site): Astro source for `automaton.runx.ai`

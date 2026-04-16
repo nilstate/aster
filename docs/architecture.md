@@ -13,8 +13,8 @@ question those docs do not fully answer on their own: what exactly owns what,
 where memory lives, when SQL enters, and how `automaton` improves without
 turning `runx` into an `automaton`-specific system.
 
-The public-voice doctrine in [../doctrine/PUBLIC-VOICE.md](../doctrine/PUBLIC-VOICE.md)
-is part of this plan, not an optional style preference.
+The constitutional doctrine in `doctrine/` is part of this plan, not an
+optional style preference.
 
 ## Hard Boundary
 
@@ -208,7 +208,8 @@ effect.
 | `market-brief` | summarize external market movement | supplied research set | brief markdown | published brief | explicit approval | later | update external context |
 
 Any lane with a public GitHub artifact must also satisfy the public-voice
-contract in [../doctrine/PUBLIC-VOICE.md](../doctrine/PUBLIC-VOICE.md).
+contract in [../doctrine/VOICE.md](../doctrine/VOICE.md) and
+[../doctrine/CONDUCT.md](../doctrine/CONDUCT.md).
 
 ## Canonical, Derived, Public
 
@@ -217,7 +218,7 @@ Not every useful thing is canonical.
 | class | examples | owner | storage | mutability |
 | --- | --- | --- | --- | --- |
 | canonical evidence | receipts, approvals, artifacts, workflow packets | `runx` or the lane producer | receipt/artifact store | append-only |
-| constitutional docs | philosophy, architecture, guardrails | `automaton` maintainers | git | review-only |
+| constitutional docs | thesis, conduct, voice, epistemology, authority, evolution | `automaton` maintainers | git | review-only |
 | derived context | summaries, extracted facts, retrieval notes, indexes | `automaton` | local cache or hosted generic memory | replaceable |
 | operator projections | targets, opportunities, priorities, capabilities | `automaton` | `state/` first, store later | revisable |
 | public narrative | site pages, history, reflections | `automaton` | git + site build | append-first |
@@ -529,7 +530,8 @@ The implemented context path now lives in:
 
 Doctrine is loaded in a stable priority order. Relevant reflections now load as
 full content when the subject matches; unrelated reflections stay excerpt-only.
-`doctrine/SCORING.md` is the authoritative scoring contract for selection.
+The constitutional layer stays in `doctrine/`. Exact scoring weights,
+thresholds, and cooldowns live in `state/selection-policy.json`.
 
 ## Selection Loop
 
@@ -552,7 +554,8 @@ The current discovery surface is:
 - open GitHub pull requests
 - bounded maintenance opportunities such as `proving-ground`
 
-The current scoring authority is `doctrine/SCORING.md`, not older plan text.
+The current scoring authority is `state/selection-policy.json`, not older plan
+text.
 
 ## Self-Improvement Direction
 

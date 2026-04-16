@@ -27,7 +27,7 @@ export async function runAutomatonCycle(options = {}) {
   const repoRoot = path.resolve(options.repoRoot ?? defaultRepoRoot);
   const repo = options.repo ?? "nilstate/automaton";
   const now = options.now ? new Date(options.now) : new Date();
-  const policy = await loadScoringPolicy(path.join(repoRoot, "doctrine", "SCORING.md"));
+  const policy = await loadSelectionPolicy(path.join(repoRoot, "state", "selection-policy.json"));
   const dossiers = await loadTargetDossiers(path.join(repoRoot, "state", "targets"));
   const targetRepos = unique([
     repo,
@@ -97,31 +97,42 @@ export async function runAutomatonCycle(options = {}) {
   };
 }
 
-export async function loadScoringPolicy(filePath) {
-  const raw = await readFile(filePath, "utf8");
-  const weightPattern = /- `([^`]+)`: `([0-9.]+)`/g;
-  const weights = {};
-  for (const match of raw.matchAll(weightPattern)) {
-    const [, key, value] = match;
-    weights[key] = Number(value);
-  }
-
+export async function loadSelectionPolicy(filePath) {
+  const raw = JSON.parse(await readFile(filePath, "utf8"));
   return {
-    weights,
+    title: String(raw.title ?? "Automaton Selection Policy"),
+    version: Number(raw.version ?? 1),
+    updated: String(raw.updated ?? ""),
+    weights: {
+      stranger_value: Number(raw.weights?.stranger_value ?? 0.24),
+      proof_strength: Number(raw.weights?.proof_strength ?? 0.24),
+      compounding_value: Number(raw.weights?.compounding_value ?? 0.19),
+      tractability: Number(raw.weights?.tractability ?? 0.16),
+      novelty: Number(raw.weights?.novelty ?? 0.09),
+      maintenance_efficiency: Number(raw.weights?.maintenance_efficiency ?? 0.08),
+    },
     thresholds: {
-      stranger_value_min: extractThreshold(raw, /stranger_value < ([0-9.]+)/, 0.6),
-      proof_strength_min: extractThreshold(raw, /proof_strength < ([0-9.]+)/, 0.7),
-      minimum_select_score: extractThreshold(raw, /scores below `([0-9.]+)`/, 0.68),
+      stranger_value_min: Number(raw.thresholds?.stranger_value_min ?? 0.6),
+      proof_strength_min: Number(raw.thresholds?.proof_strength_min ?? 0.7),
+      minimum_select_score: Number(raw.thresholds?.minimum_select_score ?? 0.68),
     },
     cooldown_hours: {
-      success: extractCooldown(raw, ["completed", "success", "merged", "published"], 72),
-      ignored: extractCooldown(raw, ["noop", "ignored", "stale", "silence"], 24 * 7),
-      rejected: extractCooldown(raw, ["rejected", "corrected"], 24 * 21),
-      severe: extractCooldown(raw, ["spam", "minimized", "harmful"], 24 * 90),
-      failed: extractCooldown(raw, ["failed", "error"], 24),
+      success: Number(raw.cooldown_hours?.success ?? 72),
+      ignored: Number(raw.cooldown_hours?.ignored ?? 24 * 7),
+      rejected: Number(raw.cooldown_hours?.rejected ?? 24 * 21),
+      severe: Number(raw.cooldown_hours?.severe ?? 24 * 90),
+      failed: Number(raw.cooldown_hours?.failed ?? 24),
     },
+    selection_contract: {
+      preferred_default: String(raw.selection_contract?.preferred_default ?? "no_op"),
+      max_priority_queue: Number(raw.selection_contract?.max_priority_queue ?? 3),
+      dispatch_count_per_cycle: Number(raw.selection_contract?.dispatch_count_per_cycle ?? 1),
+    },
+    public_comment_policy: raw.public_comment_policy ?? {},
   };
 }
+
+export const loadScoringPolicy = loadSelectionPolicy;
 
 export function discoverOpportunities({ repo, discovery, dossiers, memory, now }) {
   const opportunities = [];
@@ -306,7 +317,7 @@ export function scoreOpportunity({ opportunity, dossiers, memory, policy, now, o
 }
 
 export function selectOpportunity({ scored, policy }) {
-  const priorities = scored.slice(0, 3);
+  const priorities = scored.slice(0, policy.selection_contract?.max_priority_queue ?? 3);
   const eligible = scored.filter((entry) => !entry.vetoed);
   if (eligible.length === 0) {
     return {
@@ -1138,34 +1149,6 @@ function mapCooldownStatus(status) {
     return "failed";
   }
   return "success";
-}
-
-function extractThreshold(raw, pattern, fallback) {
-  const match = raw.match(pattern);
-  return match ? Number(match[1]) : fallback;
-}
-
-function extractCooldown(raw, labels, fallback) {
-  const matchingLine = raw
-    .split("\n")
-    .find((line) => labels.every((label) => line.includes(`\`${label}\``)));
-  if (!matchingLine) {
-    return fallback;
-  }
-
-  const hourMatch = matchingLine.match(/`([0-9]+)h`/);
-  if (hourMatch) {
-    return Number(hourMatch[1]);
-  }
-  const dayMatch = matchingLine.match(/`([0-9]+)d`/);
-  if (dayMatch) {
-    return Number(dayMatch[1]) * 24;
-  }
-  const compactMatch = matchingLine.match(/([0-9]+)(h|d)/);
-  if (compactMatch) {
-    return compactMatch[2] === "d" ? Number(compactMatch[1]) * 24 : Number(compactMatch[1]);
-  }
-  return fallback;
 }
 
 function laneWorkflow(lane) {

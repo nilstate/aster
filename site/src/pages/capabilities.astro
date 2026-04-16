@@ -4,7 +4,7 @@ import RichDoc from "../components/RichDoc.astro";
 import { readRepoDoc } from "../lib/content.js";
 
 const capabilities = await readRepoDoc("state/capabilities.md");
-const lanes = await readRepoDoc("doctrine/LANES.md");
+const runCatalog = await readRepoDoc("docs/run-catalog.md");
 ---
 
 <BaseLayout
@@ -14,6 +14,6 @@ const lanes = await readRepoDoc("doctrine/LANES.md");
 >
   <section class="grid two">
     <RichDoc doc={capabilities} />
-    <RichDoc doc={lanes} />
+    <RichDoc doc={runCatalog} />
   </section>
 </BaseLayout>

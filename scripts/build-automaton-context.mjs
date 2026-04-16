@@ -563,9 +563,11 @@ function isRelevantContextDoc(entry, subject) {
 function sortDoctrineDocs(docs) {
   const priority = {
     "doctrine/AUTOMATON.md": 0,
-    "doctrine/GUARDRAILS.md": 1,
-    "doctrine/SCORING.md": 2,
-    "doctrine/LANES.md": 3,
+    "doctrine/CONDUCT.md": 1,
+    "doctrine/VOICE.md": 2,
+    "doctrine/EPISTEMOLOGY.md": 3,
+    "doctrine/AUTHORITY.md": 4,
+    "doctrine/EVOLUTION.md": 5,
   };
   return [...docs].sort((left, right) => {
     return (priority[left.path] ?? 100) - (priority[right.path] ?? 100);
@@ -574,18 +576,14 @@ function sortDoctrineDocs(docs) {
 
 function trimDoctrineForPrompt(doc) {
   const preferences = {
-    "doctrine/AUTOMATON.md": ["Automaton Thesis"],
-    "doctrine/GUARDRAILS.md": ["Safety", "Conduct", "Evidence", "Evolution"],
-    "doctrine/SCORING.md": [
-      "Weighted Thesis Score",
-      "Vetoes",
-      "Selection Threshold",
-      "Cooldowns",
-      "Selection Loop",
-    ],
-    "doctrine/LANES.md": ["Active Lanes", "Transitional Lanes"],
+    "doctrine/AUTOMATON.md": ["What It Must Become", "What It Must Never Become", "Success Condition"],
+    "doctrine/CONDUCT.md": ["People First", "Attention Is Expensive", "Public Attention Rules"],
+    "doctrine/VOICE.md": ["Public Identity", "Voice Rules", "Permanence Test"],
+    "doctrine/EPISTEMOLOGY.md": ["Receipts Before Memory", "Canonical And Derived", "Public Truthfulness"],
+    "doctrine/AUTHORITY.md": ["Default Posture", "Allowed Without Fresh Human Approval", "Forbidden"],
+    "doctrine/EVOLUTION.md": ["Order Of Improvement", "What May Change Automatically", "Failure Response"],
   };
-  return trimSectionAware(doc.content ?? doc.excerpt, 2200, preferences[doc.path] ?? []);
+  return trimSectionAware(doc.content ?? doc.excerpt, 2800, preferences[doc.path] ?? []);
 }
 
 function trimSectionAware(content, limit, preferredHeadings = []) {

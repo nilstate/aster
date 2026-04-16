@@ -75,13 +75,30 @@ export async function listRepoDocs(relativeDir, options = {}) {
 }
 
 export async function readPublicModel() {
-  const [thesis, guardrails, lanes, priorities, capabilities, history, reflections, targets] =
+  const [
+    thesis,
+    conduct,
+    voice,
+    epistemology,
+    authority,
+    evolution,
+    priorities,
+    capabilities,
+    runCatalog,
+    history,
+    reflections,
+    targets,
+  ] =
     await Promise.all([
       readRepoDoc("doctrine/AUTOMATON.md"),
-      readRepoDoc("doctrine/GUARDRAILS.md"),
-      readRepoDoc("doctrine/LANES.md"),
+      readRepoDoc("doctrine/CONDUCT.md"),
+      readRepoDoc("doctrine/VOICE.md"),
+      readRepoDoc("doctrine/EPISTEMOLOGY.md"),
+      readRepoDoc("doctrine/AUTHORITY.md"),
+      readRepoDoc("doctrine/EVOLUTION.md"),
       readRepoDoc("state/priorities.md"),
       readRepoDoc("state/capabilities.md"),
+      readRepoDoc("docs/run-catalog.md"),
       listRepoDocs("history", { limit: 8 }),
       listRepoDocs("reflections", { limit: 8 }),
       listRepoDocs("state/targets", { limit: 24 }),
@@ -89,10 +106,15 @@ export async function readPublicModel() {
 
   return {
     thesis,
-    guardrails,
-    lanes,
+    conduct,
+    voice,
+    epistemology,
+    authority,
+    evolution,
+    constitution: [conduct, voice, epistemology, authority, evolution].filter(Boolean),
     priorities,
     capabilities,
+    runCatalog,
     history,
     reflections,
     targets,

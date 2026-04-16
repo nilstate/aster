@@ -58,6 +58,11 @@ This means:
 - if an outbound action does not feel good as a permanent statement from Kam,
   the workflow should choose `no_op`
 
+This is constitutional rather than cosmetic. `doctrine/VOICE.md` and
+`doctrine/CONDUCT.md` define the public bar; `state/selection-policy.json`
+holds the tunable mechanical thresholds that help the operator choose `no_op`
+when the bar is not met.
+
 Minimal disclosure is allowed only when it is materially useful, for example:
 
 - `Drafted with tooling, reviewed by Kam.`

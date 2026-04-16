@@ -10,6 +10,7 @@ const latestHistory = model.history[0];
 const latestReflection = model.reflections[0];
 const latestProof = activity.mainFeed[0];
 const latestOps = activity.opsFeed[0];
+const constitution = model.constitution.filter((doc) => doc !== null);
 ---
 
 <BaseLayout
@@ -115,8 +116,15 @@ const latestOps = activity.opsFeed[0];
   <section class="grid two" style="margin-top: 1rem;">
     <article class="panel">
       <div class="panel-inner">
-        <p class="eyebrow">Guardrails</p>
-        <div class="prose" set:html={model.guardrails?.html} />
+        <p class="eyebrow">Constitution</p>
+        <div class="stack">
+          {constitution.map((doc) => (
+            <article class="list-card">
+              <h3>{doc.title}</h3>
+              <p>{doc.excerpt}</p>
+            </article>
+          ))}
+        </div>
       </div>
     </article>
     <article class="panel">
@@ -130,6 +138,25 @@ const latestOps = activity.opsFeed[0];
             </a>
           ))}
         </div>
+      </div>
+    </article>
+  </section>
+
+  <section class="grid two" style="margin-top: 1rem;">
+    <article class="panel">
+      <div class="panel-inner">
+        <p class="eyebrow">Public Voice</p>
+        <h2>{model.voice?.title ?? "Voice"}</h2>
+        <p>{model.voice?.excerpt}</p>
+        <div class="prose" set:html={model.voice?.html} />
+      </div>
+    </article>
+    <article class="panel">
+      <div class="panel-inner">
+        <p class="eyebrow">Authority</p>
+        <h2>{model.authority?.title ?? "Authority"}</h2>
+        <p>{model.authority?.excerpt}</p>
+        <div class="prose" set:html={model.authority?.html} />
       </div>
     </article>
   </section>

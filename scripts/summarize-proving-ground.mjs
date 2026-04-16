@@ -38,7 +38,7 @@ for (const report of reports) {
 }
 
 const lines = [
-  "# Automaton Proving Ground Summary",
+  "# Maton Proving Ground Summary",
   "",
   `- Generated: ${new Date().toISOString()}`,
   `- Artifact dir: \`${artifactDir}\``,

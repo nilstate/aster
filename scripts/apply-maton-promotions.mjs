@@ -1,7 +1,7 @@
 import { copyFile, mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 
-import { slugifyRepoLike } from "./build-automaton-context.mjs";
+import { slugifyRepoLike } from "./build-maton-context.mjs";
 
 const managedPromotionRoots = [
   "reflections",
@@ -11,7 +11,7 @@ const managedPromotionRoots = [
 
 async function main(argv = process.argv.slice(2)) {
   const options = parseArgs(argv);
-  const result = await applyAutomatonPromotions(options);
+  const result = await applyMatonPromotions(options);
 
   if (options.output) {
     await writeFile(path.resolve(options.output), `${JSON.stringify(result, null, 2)}\n`);
@@ -20,7 +20,7 @@ async function main(argv = process.argv.slice(2)) {
   process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
 }
 
-export async function applyAutomatonPromotions(options) {
+export async function applyMatonPromotions(options) {
   const repoRoot = path.resolve(options.repoRoot);
   const summary = JSON.parse(await readFile(path.resolve(options.summary), "utf8"));
   const packet = JSON.parse(
@@ -45,7 +45,7 @@ export async function applyAutomatonPromotions(options) {
 
   const targetRepo = firstString(packet?.subject?.target_repo)
     || firstString(packet?.subject?.repo)
-    || "nilstate/automaton";
+    || "nilstate/maton";
   const targetSlug = slugifyRepoLike(targetRepo);
   const targetDossierPath = path.join(repoRoot, "state", "targets", `${targetSlug}.md`);
   assertManagedPromotionTarget(repoRoot, targetDossierPath);

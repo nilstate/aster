@@ -92,7 +92,7 @@ export async function readPublicModel() {
     targets,
   ] =
     await Promise.all([
-      readRepoDoc("doctrine/AUTOMATON.md"),
+      readRepoDoc("doctrine/MATON.md"),
       readRepoDoc("doctrine/MISSION.md"),
       readRepoDoc("doctrine/EXAMPLES.md"),
       readRepoDoc("doctrine/CONDUCT.md"),
@@ -198,7 +198,7 @@ function trimInline(value, limit) {
 }
 
 const doctrineOrder = [
-  "doctrine/AUTOMATON.md",
+  "doctrine/MATON.md",
   "doctrine/MISSION.md",
   "doctrine/EXAMPLES.md",
   "doctrine/CONDUCT.md",

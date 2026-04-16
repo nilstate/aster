@@ -81,7 +81,7 @@ export function summarizeChangeSurfaces(files = []) {
 export function evaluateLaneChangeSurfacePolicy({
   lane,
   repo,
-  ownerRepo = process.env.GITHUB_REPOSITORY || "nilstate/automaton",
+  ownerRepo = process.env.GITHUB_REPOSITORY || "nilstate/maton",
   files = [],
 }) {
   const summary = summarizeChangeSurfaces(files);
@@ -132,7 +132,7 @@ export function renderChangeSurfacePolicyLines(policy) {
   const lines = [
     "## Change Surface Policy",
     "",
-    `- Repo scope: ${policy?.internal_repo ? "`automaton` parity enforced" : "`external` report-only"}`,
+    `- Repo scope: ${policy?.internal_repo ? "`maton` parity enforced" : "`external` report-only"}`,
     `- Policy status: \`${policy?.status ?? "unknown"}\``,
     `- Surfaces touched: ${surfaces}`,
   ];

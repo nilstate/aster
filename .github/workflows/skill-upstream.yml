@@ -61,7 +61,7 @@ jobs:
       SHOULD_PUBLISH: ${{ inputs.publish }}
       FORCE_WRITE: ${{ inputs.force }}
     steps:
-      - name: Check out automaton
+      - name: Check out maton
         uses: actions/checkout@v6
         with:
           fetch-depth: 0

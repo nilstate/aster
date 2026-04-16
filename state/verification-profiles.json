@@ -1,12 +1,12 @@
 {
   "version": "runx.verification_profile_catalog.v1",
   "repo_defaults": {
-    "nilstate/automaton": "automaton.site-ci"
+    "nilstate/maton": "maton.site-ci"
   },
   "profiles": {
-    "automaton.site-ci": {
-      "repo": "nilstate/automaton",
-      "description": "Full repo contract checks for automaton changes before draft PR publication.",
+    "maton.site-ci": {
+      "repo": "nilstate/maton",
+      "description": "Full repo contract checks for maton changes before draft PR publication.",
       "commands": [
         "npm run site:ci"
       ]

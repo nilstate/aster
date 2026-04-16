@@ -28,13 +28,13 @@ test("buildPublishPlan derives lane-specific titles and branches", () => {
     lane: "docs-pr",
     requestTitle: "Clarify deploy docs",
     sourceId: "docs-pr-101",
-    targetRepo: "nilstate/automaton",
+    targetRepo: "nilstate/maton",
   });
   const fixPlan = buildPublishPlan({
     lane: "fix-pr",
     requestTitle: "Fix activity ordering",
     sourceId: "fix-pr-202",
-    targetRepo: "nilstate/automaton",
+    targetRepo: "nilstate/maton",
   });
 
   assert.match(docsPlan.branch, /^runx\/docs-pr-/);
@@ -49,15 +49,15 @@ test("buildLanePrBody includes lane guardrails and validation", () => {
     requestTitle: "Clarify deploy docs",
     requestBody: "Tighten the Pages deployment explanation.",
     sourceId: "docs-pr-101",
-    sourceUrl: "https://github.com/nilstate/automaton/issues/101",
-    targetRepo: "nilstate/automaton",
+    sourceUrl: "https://github.com/nilstate/maton/issues/101",
+    targetRepo: "nilstate/maton",
     taskId: "docs-pr-clarify-deploy-docs",
-    verificationProfile: "automaton.site-ci",
+    verificationProfile: "maton.site-ci",
     validationCommands: ["npm run site:ci"],
   });
 
-  assert.match(body, /This draft PR was opened by the `automaton` docs-pr lane/);
-  assert.match(body, /verification profile: `automaton\.site-ci`/);
+  assert.match(body, /This draft PR was opened by the `maton` docs-pr lane/);
+  assert.match(body, /verification profile: `maton\.site-ci`/);
   assert.match(body, /`npm run site:ci`/);
   assert.match(body, /Lane Guardrails/);
 });

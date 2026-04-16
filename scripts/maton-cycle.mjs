@@ -4,7 +4,7 @@ import { readdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { slugifyRepoLike } from "./build-automaton-context.mjs";
+import { slugifyRepoLike } from "./build-maton-context.mjs";
 import { evaluatePublicCommentOpportunity } from "./public-work-policy.mjs";
 import { assertMatchesRunxControlSchema } from "./runx-control-schemas.mjs";
 
@@ -13,7 +13,7 @@ const defaultRepoRoot = path.resolve(scriptDir, "..");
 
 async function main(argv = process.argv.slice(2)) {
   const options = parseArgs(argv);
-  const result = await runAutomatonCycle(options);
+  const result = await runMatonCycle(options);
   if (options.output) {
     await writeFile(path.resolve(options.output), `${JSON.stringify(result, null, 2)}\n`);
   }
@@ -23,9 +23,9 @@ async function main(argv = process.argv.slice(2)) {
   process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
 }
 
-export async function runAutomatonCycle(options = {}) {
+export async function runMatonCycle(options = {}) {
   const repoRoot = path.resolve(options.repoRoot ?? defaultRepoRoot);
-  const repo = options.repo ?? "nilstate/automaton";
+  const repo = options.repo ?? "nilstate/maton";
   const now = options.now ? new Date(options.now) : new Date();
   const policy = await loadSelectionPolicy(path.join(repoRoot, "state", "selection-policy.json"));
   const dossiers = await loadTargetDossiers(path.join(repoRoot, "state", "targets"));
@@ -75,7 +75,7 @@ export async function runAutomatonCycle(options = {}) {
     ? dispatchLane(dispatchPlan)
     : dispatchPlan;
   const generatedAt = now.toISOString();
-  const automatonControl = buildAutomatonControlState({
+  const matonControl = buildMatonControlState({
     repo,
     dossiers,
     memory,
@@ -93,14 +93,14 @@ export async function runAutomatonCycle(options = {}) {
     opportunities: scored,
     selection,
     dispatch: dispatchResult,
-    automaton_control: automatonControl,
+    maton_control: matonControl,
   };
 }
 
 export async function loadSelectionPolicy(filePath) {
   const raw = JSON.parse(await readFile(filePath, "utf8"));
   return {
-    title: String(raw.title ?? "Automaton Selection Policy"),
+    title: String(raw.title ?? "Maton Selection Policy"),
     version: Number(raw.version ?? 1),
     updated: String(raw.updated ?? ""),
     weights: {
@@ -260,7 +260,7 @@ export function scoreOpportunity({ opportunity, dossiers, memory, policy, now, o
     policy,
   });
   const lane_allowed = allowedLanes.length === 0 || allowedLanes.includes(opportunity.lane);
-  const within_v1_scope = dossier !== null || opportunity.target_repo === "nilstate/automaton";
+  const within_v1_scope = dossier !== null || opportunity.target_repo === "nilstate/maton";
   const veto_reasons = [];
   if (!within_v1_scope) {
     veto_reasons.push("target_outside_prerelease_v1_scope");
@@ -397,7 +397,7 @@ export function dispatchLane(plan, runner = run) {
     "run",
     plan.workflow,
     "--repo",
-    plan.repo ?? "nilstate/automaton",
+    plan.repo ?? "nilstate/maton",
     "--ref",
     plan.ref,
   ];
@@ -414,7 +414,7 @@ export function dispatchLane(plan, runner = run) {
 
 export function renderCycleSummary(result) {
   const lines = [
-    "# Automaton Cycle",
+    "# Maton Cycle",
     "",
     `- generated_at: \`${result.generated_at}\``,
     `- opportunities: \`${result.opportunity_count}\``,
@@ -442,7 +442,7 @@ export function renderCycleSummary(result) {
   return lines.join("\n").trim();
 }
 
-export function buildAutomatonControlState({
+export function buildMatonControlState({
   repo,
   dossiers,
   memory,
@@ -505,8 +505,8 @@ export function buildAutomatonControlState({
     ],
   };
 
-  return assertMatchesRunxControlSchema("automaton_control", controlState, {
-    label: "automaton_control",
+  return assertMatchesRunxControlSchema("maton_control", controlState, {
+    label: "maton_control",
   });
 }
 
@@ -661,7 +661,7 @@ function computeProofStrength(opportunity) {
 
 function computeCompoundingValue(opportunity, dossier) {
   let score = 0.68;
-  if (opportunity.target_repo === "nilstate/automaton") {
+  if (opportunity.target_repo === "nilstate/maton") {
     score += 0.09;
   }
   if (opportunity.target_repo === "nilstate/runx") {

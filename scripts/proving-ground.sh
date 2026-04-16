@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-AUTOMATON_ROOT="${AUTOMATON_ROOT:-$(pwd)}"
+MATON_ROOT="${MATON_ROOT:-$(pwd)}"
 RUNX_ROOT="${RUNX_ROOT:?set RUNX_ROOT to the runx workspace root}"
-ARTIFACT_DIR="${ARTIFACT_DIR:-$AUTOMATON_ROOT/.artifacts/proving-ground}"
+ARTIFACT_DIR="${ARTIFACT_DIR:-$MATON_ROOT/.artifacts/proving-ground}"
 RUNX_ANSWERS_DIR="${RUNX_ANSWERS_DIR:-}"
 PROVING_GROUND_PROFILE="${PROVING_GROUND_PROFILE:-full}"
 
@@ -56,43 +56,43 @@ run_json() {
 
 run_json evolve-introspect \
   evolve \
-  --repo_root "$AUTOMATON_ROOT"
+  --repo_root "$MATON_ROOT"
 
 run_json sourcey \
   skill "$SKILLS_ROOT/sourcey" \
-  --project "$AUTOMATON_ROOT"
+  --project "$MATON_ROOT"
 
 if [[ "$PROVING_GROUND_PROFILE" != "minimal" ]]; then
   run_json content-pipeline \
     skill "$SKILLS_ROOT/content-pipeline" \
-    --objective "Draft the next automaton operator update from repo evidence" \
+    --objective "Draft the next maton operator update from repo evidence" \
     --audience operators \
     --domain "oss repo operations" \
     --operator_context "Ground claims in committed repo state only." \
-    --target_entities automaton \
+    --target_entities maton \
     --target_entities runx
 
   run_json market-intelligence \
     skill "$SKILLS_ROOT/market-intelligence" \
-    --objective "Identify the highest-signal change in the automaton repo this week" \
+    --objective "Identify the highest-signal change in the maton repo this week" \
     --audience operators \
     --domain "oss repo operations" \
     --operator_context "Favor repo evidence over generic ecosystem claims." \
-    --target_entities automaton \
+    --target_entities maton \
     --target_entities runx
 
   run_json skill-testing \
     skill "$SKILLS_ROOT/skill-testing" \
     --skill_ref "$SKILLS_ROOT/sourcey" \
-    --objective "Assess whether sourcey is strong enough to document automaton safely" \
+    --objective "Assess whether sourcey is strong enough to document maton safely" \
     --test_constraints "Use repo-local evidence and inline harness receipts only."
 
   run_json research \
     skill "$SKILLS_ROOT/research" \
-    --objective "Identify the next highest-leverage improvement for automaton" \
+    --objective "Identify the next highest-leverage improvement for maton" \
     --domain "oss repo operations" \
     --deliverable "operator brief" \
-    --target_entities automaton \
+    --target_entities maton \
     --target_entities runx
 fi
 

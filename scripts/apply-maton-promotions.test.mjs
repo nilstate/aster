@@ -5,11 +5,11 @@ import path from "node:path";
 import { mkdtemp, mkdir, readFile, writeFile } from "node:fs/promises";
 
 import {
-  applyAutomatonPromotions,
+  applyMatonPromotions,
   assertManagedPromotionTarget,
   upsertFrontmatterField,
   upsertRecentOutcomesSection,
-} from "./apply-automaton-promotions.mjs";
+} from "./apply-maton-promotions.mjs";
 
 test("upsertRecentOutcomesSection prepends and dedupes recent outcomes", () => {
   const initial = "# Target\n\n## Why It Matters\n\ntext\n";
@@ -37,8 +37,8 @@ test("assertManagedPromotionTarget rejects doctrine writes", () => {
   );
 });
 
-test("applyAutomatonPromotions copies drafts and updates target dossier", async () => {
-  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "automaton-promotions-"));
+test("applyMatonPromotions copies drafts and updates target dossier", async () => {
+  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "maton-promotions-"));
   const repoRoot = path.join(tempRoot, "repo");
   const artifactRoot = path.join(tempRoot, "artifacts");
   await mkdir(path.join(repoRoot, "history"), { recursive: true });
@@ -63,7 +63,7 @@ test("applyAutomatonPromotions copies drafts and updates target dossier", async 
         receipt_id: "rcpt_123",
         summary: "README command drift",
         subject: {
-          target_repo: "nilstate/automaton",
+          target_repo: "nilstate/maton",
         },
       },
       null,
@@ -85,12 +85,12 @@ test("applyAutomatonPromotions copies drafts and updates target dossier", async 
     )}\n`,
   );
 
-  const result = await applyAutomatonPromotions({
+  const result = await applyMatonPromotions({
     repoRoot,
     summary: summaryPath,
   });
 
-  const dossier = await readFile(path.join(repoRoot, "state", "targets", "nilstate-automaton.md"), "utf8");
+  const dossier = await readFile(path.join(repoRoot, "state", "targets", "nilstate-maton.md"), "utf8");
   assert.equal(result.status, "applied");
   assert.match(dossier, /updated: 2026-04-16/);
   assert.match(dossier, /## Recent Outcomes/);

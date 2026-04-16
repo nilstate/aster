@@ -2,7 +2,7 @@ import { execFileSync } from "node:child_process";
 import { pathToFileURL } from "node:url";
 
 const defaultRunner = (command, args) => execFileSync(command, args, { encoding: "utf8" });
-const rollbackMarker = "<!-- automaton:rollback -->";
+const rollbackMarker = "<!-- maton:rollback -->";
 
 export async function rollbackRun(argv = process.argv.slice(2), runner = defaultRunner) {
   const options = parseArgs(argv);
@@ -89,7 +89,7 @@ export function buildRollbackPlan(options) {
     rollbackMarker,
     "## Correction",
     "",
-    "This action supersedes earlier automaton output.",
+    "This action supersedes earlier maton output.",
     "",
     `- Mode: \`${options.mode}\``,
     `- Reason: ${options.reason}`,

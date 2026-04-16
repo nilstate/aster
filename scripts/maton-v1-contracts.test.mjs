@@ -9,17 +9,17 @@ import {
   normalizeWorkspaceChangePlanRequest,
   resolveVerificationPlan,
   validateVerificationProfileCatalog,
-} from "./automaton-v1-contracts.mjs";
+} from "./maton-v1-contracts.mjs";
 import { loadRunxControlSchemaSync } from "./runx-control-schemas.mjs";
 
 const catalog = validateVerificationProfileCatalog({
   version: "runx.verification_profile_catalog.v1",
   repo_defaults: {
-    "nilstate/automaton": "automaton.site-ci",
+    "nilstate/maton": "maton.site-ci",
   },
   profiles: {
-    "automaton.site-ci": {
-      repo: "nilstate/automaton",
+    "maton.site-ci": {
+      repo: "nilstate/maton",
       description: "Run the site CI checks.",
       commands: ["npm run site:ci"],
     },
@@ -34,13 +34,13 @@ test("normalizeIssueToPrRequest applies the repo default verification profile", 
       source_id: "101",
     },
     {
-      defaultRepo: "nilstate/automaton",
+      defaultRepo: "nilstate/maton",
       catalog,
     },
   );
 
-  assert.equal(request.target_repo, "nilstate/automaton");
-  assert.equal(request.verification_profile, "automaton.site-ci");
+  assert.equal(request.target_repo, "nilstate/maton");
+  assert.equal(request.verification_profile, "maton.site-ci");
 });
 
 test("normalizeIssueToPrRequest rejects out-of-scope repos", () => {
@@ -62,19 +62,19 @@ test("normalizeIssueToPrRequest preserves an explicit verification profile when 
     issue_title: "Fix docs drift",
     source: "github_issue",
     source_id: "101",
-    verification_profile: "automaton.site-ci",
+    verification_profile: "maton.site-ci",
   }, {
-    defaultRepo: "nilstate/automaton",
+    defaultRepo: "nilstate/maton",
   });
 
-  assert.equal(request.verification_profile, "automaton.site-ci");
+  assert.equal(request.verification_profile, "maton.site-ci");
   assert.ok(!Object.hasOwn(request, "validation_commands"));
 });
 
 test("resolveVerificationPlan maps legacy validation commands onto a declared profile", () => {
   const resolved = resolveVerificationPlan({
     catalog,
-    targetRepo: "nilstate/automaton",
+    targetRepo: "nilstate/maton",
     issueToPrRequest: {
       issue_title: "Fix docs drift",
       source: "github_issue",
@@ -83,7 +83,7 @@ test("resolveVerificationPlan maps legacy validation commands onto a declared pr
     },
   });
 
-  assert.equal(resolved.profile_id, "automaton.site-ci");
+  assert.equal(resolved.profile_id, "maton.site-ci");
   assert.equal(resolved.compatibility_mode, "legacy_validation_command_mapping");
   assert.deepEqual(resolved.commands, ["npm run site:ci"]);
 });
@@ -110,7 +110,7 @@ test("collectWorkerValidationIssues filters invalid worker requests", () => {
       },
     ],
     {
-      defaultRepo: "nilstate/automaton",
+      defaultRepo: "nilstate/maton",
       catalog,
     },
   );
@@ -129,9 +129,9 @@ test("normalizeWorkerRequest rejects schema-invalid extra properties", () => {
         source: "github_issue",
         source_id: "101",
       },
-      target_repo: "nilstate/automaton",
+      target_repo: "nilstate/maton",
     }, {
-      defaultRepo: "nilstate/automaton",
+      defaultRepo: "nilstate/maton",
       catalog,
     });
   }, /worker-request\.schema\.json/);
@@ -141,10 +141,10 @@ test("normalizeWorkspaceChangePlanRequest preserves structured target surfaces",
   const request = normalizeWorkspaceChangePlanRequest(
     {
       objective: "Roll out the docs fix",
-      project_context: "automaton workspace",
+      project_context: "maton workspace",
       target_surfaces: [
         {
-          surface: "nilstate/automaton",
+          surface: "nilstate/maton",
           kind: "repo",
           mutating: true,
           rationale: "Single prerelease repo scope.",
@@ -154,12 +154,12 @@ test("normalizeWorkspaceChangePlanRequest preserves structured target surfaces",
       success_criteria: ["One bounded plan exists before changes start."],
     },
     {
-      targetRepo: "nilstate/automaton",
+      targetRepo: "nilstate/maton",
     },
   );
 
   assert.equal(request.target_surfaces.length, 1);
-  assert.equal(request.target_surfaces[0].surface, "nilstate/automaton");
+  assert.equal(request.target_surfaces[0].surface, "nilstate/maton");
   assert.equal(request.target_surfaces[0].mutating, true);
 });
 

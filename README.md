@@ -1,6 +1,6 @@
-# automaton
+# maton
 
-`automaton` is the canonical public proving-ground destination for `runx`.
+`maton` is the canonical public proving-ground destination for `runx`.
 
 The repo itself now carries the operator core:
 
@@ -10,31 +10,31 @@ The repo itself now carries the operator core:
 - the separate public face under `site/`
 - working docs under `docs/` during migration
 
-The docs in this repo are still about `automaton` itself:
+The docs in this repo are still about `maton` itself:
 
-- what `automaton` is trying to become
+- what `maton` is trying to become
 - the philosophy that governs how it should behave
 - how it should evolve under governance
 - which live lanes are real today
 - what evidence each lane should emit
 
-The `runx` engine docs still belong in the `runx` repo. `automaton` is the
+The `runx` engine docs still belong in the `runx` repo. `maton` is the
 public target, not the place where the framework API and platform model should
 be documented.
 
 ## Intention
 
-`automaton` is meant to become a repo that can improve itself gradually in
+`maton` is meant to become a repo that can improve itself gradually in
 public.
 
 The story is not "an autonomous agent that silently rewrites itself."
 
 The story is:
 
-1. `runx` inspects `automaton`
+1. `runx` inspects `maton`
 2. `runx` proposes bounded changes and public updates
 3. humans approve the next safe mutation
-4. `automaton` improves gradually, with receipts
+4. `maton` improves gradually, with receipts
 
 That means the repo should accumulate a visible evolutionary trail:
 
@@ -53,7 +53,7 @@ The governing philosophy is:
 
 ## Live Lanes
 
-`automaton` now has seven concrete live lanes:
+`maton` now has seven concrete live lanes:
 
 - `issue-triage`: covers both issue intake and PR review. Issues run through
   `support-triage`, can open `objective-decompose` when planning is approved,
@@ -77,7 +77,7 @@ The governing philosophy is:
 
 Support workflows stay valuable even when the external caller is offline:
 
-- `site-pages`: builds and deploys `automaton.runx.ai` from repo-owned operator
+- `site-pages`: builds and deploys `maton.runx.ai` from repo-owned operator
   content
 - `generated-pr-policy`: enforces draft-only plus human-review policy on
   generated `runx/*` PRs
@@ -86,7 +86,7 @@ Support workflows stay valuable even when the external caller is offline:
 
 ## Required Secrets
 
-`automaton` needs only a small hosted secret surface:
+`maton` needs only a small hosted secret surface:
 
 - `OPENAI_API_KEY`: external caller for `runx` `agent-step` boundaries
 - `RUNX_CALLER_MODEL` (optional): pinned model override for the hosted bridge
@@ -101,13 +101,13 @@ the draft-first observability lanes continue to run.
 
 ## Layout
 
-- [docs/introduction.md](./docs/introduction.md): what `automaton` is trying to
+- [docs/introduction.md](./docs/introduction.md): what `maton` is trying to
   prove
 - [docs/philosophy.md](./docs/philosophy.md): the doctrine behind the repo's
   behavior and safety boundaries
 - [docs/architecture.md](./docs/architecture.md): the full-shape plan,
   ownership boundary, memory model, and site topology
-- [doctrine/AUTOMATON.md](./doctrine/AUTOMATON.md): the public thesis
+- [doctrine/MATON.md](./doctrine/MATON.md): the public thesis
 - [doctrine/MISSION.md](./doctrine/MISSION.md): what kinds of actions most
   strongly prove the `runx` runtime thesis in public
 - [doctrine/EXAMPLES.md](./doctrine/EXAMPLES.md): concrete good, bad, and
@@ -129,7 +129,7 @@ the draft-first observability lanes continue to run.
   weights, thresholds, cooldowns, and selection contract
 - [history/](./history): append-only public evolutionary record
 - [reflections/](./reflections): append-only diagnosis and interpretation layer
-- [site/](./site): Astro source for `automaton.runx.ai`
+- [site/](./site): Astro source for `maton.runx.ai`
 - [docs/evolution.md](./docs/evolution.md): the intended evolutionary path
 - [docs/operating-model.md](./docs/operating-model.md): the governance model
   for gradual self-improvement
@@ -139,15 +139,15 @@ the draft-first observability lanes continue to run.
   pursuing
 - [docs/sourcey.config.ts](./docs/sourcey.config.ts): Sourcey config for the
   optional working-docs surface
-- [scripts/build-automaton-context.mjs](./scripts/build-automaton-context.mjs):
+- [scripts/build-maton-context.mjs](./scripts/build-maton-context.mjs):
   assembles doctrine, state, history, reflections, and artifact signals into a
   bounded context bundle before the bridge calls the model
-- [scripts/automaton-core.mjs](./scripts/automaton-core.mjs): the unified lane
+- [scripts/maton-core.mjs](./scripts/maton-core.mjs): the unified lane
   runtime that assembles context, invokes the bridge, and writes promotion
   drafts
-- [scripts/promote-automaton-state.mjs](./scripts/promote-automaton-state.mjs):
+- [scripts/promote-maton-state.mjs](./scripts/promote-maton-state.mjs):
   materializes reflection/history draft packets from completed lane runs
-- [scripts/apply-automaton-promotions.mjs](./scripts/apply-automaton-promotions.mjs):
+- [scripts/apply-maton-promotions.mjs](./scripts/apply-maton-promotions.mjs):
   applies promotion drafts back into repo-owned `history/`, `reflections/`, and
   target dossier recent-outcomes sections
 - [scripts/runx-agent-bridge.mjs](./scripts/runx-agent-bridge.mjs): external
@@ -207,7 +207,7 @@ node scripts/runx-agent-bridge.mjs \
   --body "Describe the concrete repo problem here." \
   --source github_issue \
   --source_id 1 \
-  --source_url https://github.com/nilstate/automaton/issues/1
+  --source_url https://github.com/nilstate/maton/issues/1
 ```
 
 If you have prerecorded caller answers for a given proving-ground run, place

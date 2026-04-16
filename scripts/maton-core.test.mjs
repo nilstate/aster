@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { buildBridgeArgs } from "./automaton-core.mjs";
+import { buildBridgeArgs } from "./maton-core.mjs";
 
 test("buildBridgeArgs forwards context and approvals to the shared bridge", () => {
   const args = buildBridgeArgs({

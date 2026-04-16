@@ -9,7 +9,7 @@ on:
       target_repo:
         description: Repo to update. Must have a declared verification profile.
         required: true
-        default: nilstate/automaton
+        default: nilstate/maton
         type: string
       title:
         description: One bounded docs request title.
@@ -41,7 +41,7 @@ jobs:
   docs-pr:
     runs-on: ubuntu-latest
     env:
-      GH_TOKEN: ${{ secrets.AUTOMATON_GH_TOKEN != '' && secrets.AUTOMATON_GH_TOKEN || secrets.RUNX_REPOSITORY_PAT || github.token }}
+      GH_TOKEN: ${{ secrets.MATON_GH_TOKEN != '' && secrets.MATON_GH_TOKEN || secrets.RUNX_REPOSITORY_PAT || github.token }}
       RUNX_CALLER_MODEL: ${{ vars.RUNX_CALLER_MODEL || 'gpt-5.4' }}
       RUNX_CALLER_REASONING_EFFORT: ${{ vars.RUNX_CALLER_REASONING_EFFORT || 'xhigh' }}
       RUNX_CALLER_MAX_ATTEMPTS: ${{ vars.RUNX_CALLER_MAX_ATTEMPTS || '3' }}
@@ -58,7 +58,7 @@ jobs:
             echo "enabled=true" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Check out automaton
+      - name: Check out maton
         if: ${{ steps.preflight.outputs.enabled == 'true' }}
         uses: actions/checkout@v6
         with:

@@ -40,7 +40,7 @@ export async function buildOperatorShakeoutReport({ repoRoot, publishEvidencePat
       fingerprint: "abc12345deadbeef",
     }),
     subjectKind: "github_issue",
-    subjectLocator: "nilstate/automaton#issue/101",
+    subjectLocator: "nilstate/maton#issue/101",
   });
   const generatedBody = ensureGeneratedPrPolicyBlock("## Summary\n\nBounded PR body.", {
     lane: "docs-pr",
@@ -50,11 +50,25 @@ export async function buildOperatorShakeoutReport({ repoRoot, publishEvidencePat
       status: "published",
       policy: { lane: "docs-pr" },
       change_summary: { file_count: 1, additions: 4, deletions: 0 },
+      change_surface_policy: {
+        status: "allowed",
+        internal_repo: true,
+        surfaces: ["working_docs", "repo_meta"],
+        reasons: [],
+      },
     },
-    body: generatedBody,
+    body: ensureGeneratedPrPolicyBlock(generatedBody, {
+      lane: "docs-pr",
+      changeSurfacePolicy: {
+        status: "allowed",
+        internal_repo: true,
+        surfaces: ["working_docs", "repo_meta"],
+        reasons: [],
+      },
+    }),
     validation: {
       commands: ["npm run site:ci"],
-      verification_profile: "automaton.site-ci",
+      verification_profile: "maton.site-ci",
     },
   });
   const replayIssue = buildReplayGuardPlan({
@@ -63,7 +77,7 @@ export async function buildOperatorShakeoutReport({ repoRoot, publishEvidencePat
     title: "Clarify deploy docs",
     body: "Docs drift exists.",
     comments: [],
-    operator_memory_branch: "runx/operator-memory-issue-triage-nilstate-automaton-issue-101",
+    operator_memory_branch: "runx/operator-memory-issue-triage-nilstate-maton-issue-101",
     has_open_operator_memory_pr: false,
   });
   const replayPr = buildReplayGuardPlan({
@@ -71,7 +85,7 @@ export async function buildOperatorShakeoutReport({ repoRoot, publishEvidencePat
     pr: "12",
     sha: "abc1234",
     comments: [],
-    operator_memory_branch: "runx/operator-memory-issue-triage-nilstate-automaton-pr-12",
+    operator_memory_branch: "runx/operator-memory-issue-triage-nilstate-maton-pr-12",
     has_open_operator_memory_pr: false,
   });
   const policyPlan = buildGeneratedPrPolicyPlan({
@@ -82,18 +96,24 @@ export async function buildOperatorShakeoutReport({ repoRoot, publishEvidencePat
   });
   const rollbackPlan = buildRollbackPlan({
     mode: "pr-comment",
-    repo: "nilstate/automaton",
+    repo: "nilstate/maton",
     pr: "12",
     reason: "Superseded by a narrower correction.",
     replacementBody: "Please review only the deployment note changes.",
   });
 
   const workflowChecks = [
+    ".github/workflows/maton-cycle.yml",
     ".github/workflows/site-pages.yml",
     ".github/workflows/generated-pr-policy.yml",
     ".github/workflows/rollback.yml",
     ".github/workflows/docs-pr.yml",
     ".github/workflows/fix-pr.yml",
+    ".github/workflows/issue-triage.yml",
+    ".github/workflows/proving-ground.yml",
+    ".github/workflows/skill-upstream.yml",
+    ".github/workflows/merge-watch.yml",
+    ".github/workflows/skill-lab.yml",
   ].map((relativePath) => ({
     name: relativePath,
     ok: publishEvidence.includes(path.basename(relativePath, ".yml")),

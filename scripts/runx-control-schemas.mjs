@@ -27,9 +27,9 @@ export const RUNX_CONTROL_SCHEMA_ARTIFACTS = {
     ref: "https://runx.ai/spec/verification-report.schema.json",
     file: "spec/verification-report.schema.json",
   },
-  automaton_control: {
-    ref: "https://runx.ai/spec/automaton-control.schema.json",
-    file: "spec/automaton-control.schema.json",
+  maton_control: {
+    ref: "https://runx.ai/spec/maton-control.schema.json",
+    file: "spec/maton-control.schema.json",
   },
 };
 

@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import {
   buildPromotionDrafts,
   extractRunSignal,
-} from "./promote-automaton-state.mjs";
+} from "./promote-maton-state.mjs";
 
 test("extractRunSignal prefers triage summaries from execution stdout", () => {
   const signal = extractRunSignal({
@@ -29,7 +29,7 @@ test("buildPromotionDrafts creates reflection and history drafts", () => {
     now: new Date("2026-04-16T00:00:00Z"),
     contextBundle: {
       subject: {
-        locator: "nilstate/automaton#issue/101",
+        locator: "nilstate/maton#issue/101",
       },
     },
     runResult: {

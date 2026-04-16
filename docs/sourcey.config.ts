@@ -1,6 +1,6 @@
 export default {
-  name: "automaton",
-  repo: "https://github.com/nilstate/automaton",
+  name: "maton",
+  repo: "https://github.com/nilstate/maton",
   editBranch: "main",
   editBasePath: "docs",
   theme: {
@@ -18,7 +18,7 @@ export default {
   navigation: {
     tabs: [
       {
-        tab: "Automaton",
+        tab: "Maton",
         groups: [
           {
             group: "Start",
@@ -40,20 +40,20 @@ export default {
     links: [
       {
         type: "github",
-        href: "https://github.com/nilstate/automaton",
+        href: "https://github.com/nilstate/maton",
       },
     ],
     primary: {
       type: "button",
       label: "View Repo",
-      href: "https://github.com/nilstate/automaton",
+      href: "https://github.com/nilstate/maton",
     },
   },
   footer: {
     links: [
       {
         type: "github",
-        href: "https://github.com/nilstate/automaton",
+        href: "https://github.com/nilstate/maton",
       },
     ],
   },

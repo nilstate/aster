@@ -1,12 +1,12 @@
 ---
-title: Target Dossier — nilstate/automaton
+title: Target Dossier — nilstate/maton
 updated: 2026-04-17
 visibility: public
 subject_kind: github_repository
-subject_locator: nilstate/automaton
+subject_locator: nilstate/maton
 ---
 
-# nilstate/automaton
+# nilstate/maton
 
 ## Why It Matters
 

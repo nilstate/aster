@@ -13,13 +13,13 @@ public-value ranking before authority widens any further.
 
 ## P2. Keep The Public Face On `site/`
 
-`automaton.runx.ai` should be built from `automaton`-owned content and
+`maton.runx.ai` should be built from `maton`-owned content and
 selected public evidence, not from Sourcey docs.
 
 ## P3. Strengthen Target Dossiers
 
 The operator should know the trust posture, current opportunities, and recent
-outcome history for `nilstate/automaton` and `nilstate/runx` before expanding
+outcome history for `nilstate/maton` and `nilstate/runx` before expanding
 further.
 
 ## P4. Keep Proof Honest

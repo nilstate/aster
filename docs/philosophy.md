@@ -1,11 +1,11 @@
 ---
 title: Philosophy
-description: The doctrine that defines what automaton is trying to prove and how it should behave.
+description: The doctrine that defines what maton is trying to prove and how it should behave.
 ---
 
 # Philosophy
 
-`automaton` is meant to be a publicly governed software organism.
+`maton` is meant to be a publicly governed software organism.
 
 That wording matters.
 
@@ -16,7 +16,7 @@ visible human judgment.
 
 ## Core belief
 
-The core belief behind `automaton` is that useful automation should become more
+The core belief behind `maton` is that useful automation should become more
 legible as it becomes more capable.
 
 If the system gets more powerful while becoming harder to inspect, it is moving
@@ -29,7 +29,7 @@ the right direction.
 
 ### 1. Legibility over spectacle
 
-`automaton` should prefer a boring, inspectable trail over a dramatic demo.
+`maton` should prefer a boring, inspectable trail over a dramatic demo.
 
 That means:
 
@@ -72,7 +72,7 @@ That means:
 
 ### 5. Governance over convenience
 
-`automaton` should become more useful without quietly discarding approval and
+`maton` should become more useful without quietly discarding approval and
 review boundaries.
 
 That means:
@@ -84,7 +84,7 @@ That means:
 
 ### 6. Evolution over reinvention
 
-`automaton` should improve by accumulating trusted capabilities, context, and
+`maton` should improve by accumulating trusted capabilities, context, and
 docs, not by rebranding every run as a fresh start.
 
 That means:
@@ -95,7 +95,7 @@ That means:
 
 ## Anti-goals
 
-`automaton` should explicitly avoid four failure modes:
+`maton` should explicitly avoid four failure modes:
 
 - agent theater: impressive narration with weak operational evidence
 - hidden self-modification: silent repo changes without a public review surface
@@ -117,7 +117,7 @@ though the operational lane catalog now lives outside `doctrine/`:
 - `docs-pr` keeps the repo's public explanation aligned with the live system
 - `objective-to-skill` turns repeated needs into governed capability proposals
 
-The long-term story is not "automaton became autonomous."
+The long-term story is not "maton became autonomous."
 
-The long-term story is "automaton became more useful while staying legible,
+The long-term story is "maton became more useful while staying legible,
 reviewable, and cumulative."

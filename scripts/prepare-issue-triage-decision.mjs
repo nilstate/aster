@@ -5,7 +5,7 @@ import {
   isPrereleaseEligibleTargetRepo,
   loadVerificationProfileCatalogSync,
   normalizeWorkspaceChangePlanRequest as validateWorkspaceChangePlanRequest,
-} from "./automaton-v1-contracts.mjs";
+} from "./maton-v1-contracts.mjs";
 
 export async function main(argv = process.argv.slice(2)) {
   const options = parseArgs(argv);

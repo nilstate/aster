@@ -8,7 +8,7 @@ import {
   collectWorkerValidationIssues,
   loadVerificationProfileCatalogSync,
   resolveVerificationPlan,
-} from "./automaton-v1-contracts.mjs";
+} from "./maton-v1-contracts.mjs";
 import { assertMatchesRunxControlSchema } from "./runx-control-schemas.mjs";
 import { evaluateGeneratedPr } from "./evaluate-generated-pr.mjs";
 
@@ -127,7 +127,7 @@ async function runWorker({ options, workerRequest, index, verificationCatalog })
     await writeFile(repoSnapshotPath, `${JSON.stringify(repoSnapshot, null, 2)}\n`);
     const inlineRepoSnapshot = buildInlineRepoSnapshot(repoSnapshot);
     const coreArgs = [
-      path.join(repoRoot, "scripts", "automaton-core.mjs"),
+      path.join(repoRoot, "scripts", "maton-core.mjs"),
       "--lane",
       "issue-to-pr-worker",
       "--runx-root",
@@ -487,7 +487,7 @@ function buildPrBody({
     : "- no repo-specific validation command was declared";
   return `## Summary
 
-This draft PR was opened by the \`automaton\` issue triage lane.
+This draft PR was opened by the \`maton\` issue triage lane.
 
 - Source issue: #${issueNumber}
 - Issue URL: ${issueUrl}

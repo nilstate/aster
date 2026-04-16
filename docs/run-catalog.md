@@ -1,6 +1,6 @@
 # Run Catalog
 
-This is the live run catalog for `automaton`.
+This is the live run catalog for `maton`.
 
 ## Live Mutation And Comment Lanes
 
@@ -75,7 +75,7 @@ This is the live run catalog for `automaton`.
 
 - trigger: push to `main` affecting docs sources, or manual dispatch
 - command: `npm run site:build`
-- purpose: publish the public `automaton.runx.ai` site
+- purpose: publish the public `maton.runx.ai` site
 - output: GitHub Pages deployment from `site/dist`
 
 ### `proving-ground`
@@ -103,7 +103,7 @@ This is the live run catalog for `automaton`.
 - trigger: manual workflow dispatch
 - command: `node scripts/rollback-run.mjs`
 - purpose: publish a corrective comment or close a generated PR when a prior
-  automaton output was wrong
+  maton output was wrong
 - output: rollback artifact plus the public correction or closure action
 
 ## Next Lanes

@@ -52,7 +52,7 @@ test("isRetryableBridgeFailure ignores non-transport failures", () => {
 
 test("buildInlineRepoSnapshot keeps the prompt payload compact", () => {
   const snapshot = buildInlineRepoSnapshot({
-    target_repo: "nilstate/automaton",
+    target_repo: "nilstate/maton",
     git: { branch: null, head: "abc123" },
     top_level_entries: Array.from({ length: 20 }, (_, index) => ({
       name: `entry-${index}`,
@@ -62,7 +62,7 @@ test("buildInlineRepoSnapshot keeps the prompt payload compact", () => {
     notable_paths: Array.from({ length: 20 }, (_, index) => `path-${index}`),
     manifests: {
       "package.json": {
-        name: "automaton",
+        name: "maton",
         private: true,
         scripts: Array.from({ length: 20 }, (_, index) => `script-${index}`),
       },
@@ -81,8 +81,8 @@ test("buildInlineRepoSnapshot keeps the prompt payload compact", () => {
 test("buildVerificationReport emits the canonical verification report shape", () => {
   const report = buildVerificationReport({
     reportId: "verification-101",
-    targetRepo: "nilstate/automaton",
-    verificationProfile: "automaton.site-ci",
+    targetRepo: "nilstate/maton",
+    verificationProfile: "maton.site-ci",
     status: "pass",
     commands: [
       {

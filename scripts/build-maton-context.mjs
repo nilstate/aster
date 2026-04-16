@@ -26,7 +26,7 @@ async function main(argv = process.argv.slice(2)) {
 export async function buildContextBundle(options = {}) {
   const repoRoot = path.resolve(options.repoRoot ?? defaultRepoRoot);
   const artifactRoot = path.resolve(repoRoot, options.artifactRoot ?? ".artifacts");
-  const repo = options.repo ?? "nilstate/automaton";
+  const repo = options.repo ?? "nilstate/maton";
   const targetRepo = options.targetRepo ?? repo;
   const targetSlug = slugifyRepoLike(targetRepo);
   const snapshot = await readOptionalJson(options.snapshot ? path.resolve(options.snapshot) : undefined);
@@ -90,7 +90,7 @@ export async function buildContextBundle(options = {}) {
 
 export function renderContextPrompt(bundle) {
   const lines = [
-    "# Automaton Context Bundle",
+    "# Maton Context Bundle",
     "",
     `- lane: \`${bundle.lane}\``,
     `- subject_kind: \`${bundle.subject.kind}\``,
@@ -562,7 +562,7 @@ function isRelevantContextDoc(entry, subject) {
 
 function sortDoctrineDocs(docs) {
   const priority = {
-    "doctrine/AUTOMATON.md": 0,
+    "doctrine/MATON.md": 0,
     "doctrine/MISSION.md": 1,
     "doctrine/EXAMPLES.md": 2,
     "doctrine/CONDUCT.md": 3,
@@ -578,7 +578,7 @@ function sortDoctrineDocs(docs) {
 
 function trimDoctrineForPrompt(doc) {
   const preferences = {
-    "doctrine/AUTOMATON.md": ["What It Must Become", "What It Must Never Become", "Success Condition"],
+    "doctrine/MATON.md": ["What It Must Become", "What It Must Never Become", "Success Condition"],
     "doctrine/MISSION.md": ["What Must Be Proven", "Highest-Value Proof", "Mission Questions"],
     "doctrine/EXAMPLES.md": ["Good Public Comment", "Bad Public Comment", "Good `no_op`", "Mission Contrast"],
     "doctrine/CONDUCT.md": ["People First", "Attention Is Expensive", "Public Attention Rules"],

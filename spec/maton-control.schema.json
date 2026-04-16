@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://runx.ai/spec/automaton-control.schema.json",
-  "title": "runx Automaton Control Objects",
-  "description": "Canonical prerelease v1 schema for persisted automaton operator state.",
+  "$id": "https://runx.ai/spec/maton-control.schema.json",
+  "title": "runx Maton Control Objects",
+  "description": "Canonical prerelease v1 schema for persisted maton operator state.",
   "type": "object",
   "properties": {
     "targets": {

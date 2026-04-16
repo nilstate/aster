@@ -6,7 +6,7 @@ visibility: public
 
 # Epistemology
 
-This file defines what counts as truth for `automaton`.
+This file defines what counts as truth for `maton`.
 
 ## Receipts Before Memory
 

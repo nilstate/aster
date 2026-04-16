@@ -79,6 +79,7 @@ These are no longer undefined gaps. They are explicit execution requirements.
 
 - mutating PR lanes stay draft-first by default
 - public-comment lanes should record usefulness and correctness evals
+- spam or minimized public comments are severe failures: remove or correct the comment, emit a reflection, update target memory, and apply a long cooldown before similar actions
 - authority only widens when eval quality is stable and reflected in receipts
 
 ### Merge and rollback

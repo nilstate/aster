@@ -37,6 +37,8 @@ Do not act when any veto is active:
 - subject already has an open operator-memory PR
 - bot-authored pull requests are vetoed by default
 - dependency-update or internal/build-only pull requests do not count as thesis work
+- PR comment lanes require a welcome signal: either an already-active thread or an author with recognized contributor trust
+- public comments without a unique unblock are not valuable action
 
 When every candidate is vetoed, return `no_op`.
 
@@ -53,6 +55,7 @@ Cooldowns are lane-and-target scoped.
 - `completed`, `success`, `merged`, `published`: `72h`
 - `noop`, `ignored`, `stale`, `silence`: `7d`
 - `rejected`, `corrected`: `21d`
+- `spam`, `minimized`, `harmful`: `90d`
 - `failed`, `error`: `24h`
 
 ## Lane Heuristics
@@ -60,9 +63,11 @@ Cooldowns are lane-and-target scoped.
 The intended biases are:
 
 - live public issues and PRs usually outrank maintenance work
+- unsolicited public comments are high-risk attention costs and should be rarer than authored fixes
 - maintenance work may clear the bar when it is stale enough and directly improves the public face
 - repeated identical work on the same target should decay in novelty and trigger cooldowns
 - `automaton` should prefer public proof work over private housekeeping when both are available
+- spam, minimization, or public correction should be treated as severe failures that widen cooldowns and make future comment selection harder
 
 ## Selection Loop
 

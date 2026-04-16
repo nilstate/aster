@@ -51,6 +51,7 @@ export async function buildContextBundle(options = {}) {
     path.join(repoRoot, "state", "targets", `${targetSlug}.md`),
     repoRoot,
   );
+  const targetSummary = target ? summarizeTargetDoc(target) : null;
   const artifactSignals = await collectArtifactSignals(artifactRoot, repoRoot, {
     limit: Number(options.maxArtifacts ?? 8),
   });
@@ -72,6 +73,7 @@ export async function buildContextBundle(options = {}) {
       priorities,
       capabilities,
       target,
+      target_summary: targetSummary,
     },
     history,
     reflections: reflections.map((entry) => ({
@@ -129,6 +131,10 @@ export function renderContextPrompt(bundle) {
 
   if (stateDocs.length > 0) {
     lines.push("", "## Current State");
+    if (bundle.state.target_summary) {
+      lines.push("", "### Target Summary", "");
+      lines.push(...renderTargetSummaryLines(bundle.state.target_summary));
+    }
     for (const [label, doc] of stateDocs) {
       lines.push("", `### ${label}`);
       lines.push("", trimForPrompt(doc.content ?? doc.excerpt, 2000));
@@ -298,6 +304,45 @@ async function readMarkdownDocument(filePath, repoRoot, includeContent = true) {
   };
 }
 
+function summarizeTargetDoc(doc) {
+  const content = doc.content ?? "";
+  return {
+    subject_locator: firstString(doc.frontmatter?.subject_locator) || null,
+    default_lanes: parseSectionCodeList(content, "Default Lanes"),
+    current_opportunities: parseCurrentOpportunities(content),
+    recent_outcomes: parseRecentOutcomes(content),
+    trust_notes: parseSectionBullets(content, "Trust Notes"),
+  };
+}
+
+function renderTargetSummaryLines(summary) {
+  const lines = [];
+  if (summary.default_lanes.length > 0) {
+    lines.push(`- Default lanes: ${summary.default_lanes.map((lane) => `\`${lane}\``).join(", ")}`);
+  }
+  if (summary.current_opportunities.length > 0) {
+    lines.push("- Current opportunities:");
+    for (const entry of summary.current_opportunities.slice(0, 4)) {
+      const laneLabel = entry.lane ? `\`${entry.lane}\`` : "general";
+      lines.push(`  - ${laneLabel}: ${entry.summary}`);
+    }
+  }
+  if (summary.recent_outcomes.length > 0) {
+    lines.push("- Recent outcomes:");
+    for (const outcome of summary.recent_outcomes.slice(0, 3)) {
+      const receipt = outcome.receipt_id ? ` receipt=\`${outcome.receipt_id}\`` : "";
+      lines.push(`  - \`${outcome.lane}\` -> \`${outcome.status}\`${receipt}: ${outcome.summary}`);
+    }
+  }
+  if (summary.trust_notes.length > 0) {
+    lines.push("- Trust notes:");
+    for (const note of summary.trust_notes.slice(0, 3)) {
+      lines.push(`  - ${note}`);
+    }
+  }
+  return lines;
+}
+
 function splitFrontmatter(raw) {
   if (!raw.startsWith("---\n")) {
     return { frontmatter: {}, content: raw };
@@ -321,6 +366,93 @@ function splitFrontmatter(raw) {
     }
   }
   return { frontmatter, content };
+}
+
+function parseSectionCodeList(content, heading) {
+  const section = matchSection(content, heading);
+  if (!section) {
+    return [];
+  }
+  return section
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line.startsWith("-"))
+    .map((line) => {
+      const match = line.match(/`([^`]+)`/);
+      return match ? match[1] : line.replace(/^-+\s*/, "").trim();
+    })
+    .filter(Boolean);
+}
+
+function parseSectionBullets(content, heading) {
+  const section = matchSection(content, heading);
+  if (!section) {
+    return [];
+  }
+  return section
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line.startsWith("-"))
+    .map((line) => line.replace(/^-+\s*/, "").trim());
+}
+
+function parseCurrentOpportunities(content) {
+  const section = matchSection(content, "Current Opportunities");
+  if (!section) {
+    return [];
+  }
+  return section
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line.startsWith("-"))
+    .map((line) => {
+      const laneMatch = line.match(/^- `([^`]+)`:\s*(.+)$/);
+      if (laneMatch) {
+        return {
+          lane: laneMatch[1],
+          summary: laneMatch[2].trim(),
+        };
+      }
+      return {
+        lane: null,
+        summary: line.replace(/^-+\s*/, "").trim(),
+      };
+    });
+}
+
+function parseRecentOutcomes(content) {
+  const section = matchSection(content, "Recent Outcomes");
+  if (!section) {
+    return [];
+  }
+  return section
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line.startsWith("-"))
+    .map((line) => {
+      const withReceipt = line.match(/^- ([0-9-]+) · `([^`]+)` · `([^`]+)` · `([^`]+)` · (.+)$/);
+      if (withReceipt) {
+        const [, date, lane, status, receipt_id, summary] = withReceipt;
+        return { date, lane, status, receipt_id, summary };
+      }
+      const withoutReceipt = line.match(/^- ([0-9-]+) · `([^`]+)` · `([^`]+)` · (.+)$/);
+      if (!withoutReceipt) {
+        return null;
+      }
+      const [, date, lane, status, summary] = withoutReceipt;
+      return { date, lane, status, receipt_id: null, summary };
+    })
+    .filter(Boolean);
+}
+
+function matchSection(content, heading) {
+  const pattern = new RegExp(`## ${escapeRegExp(heading)}\\n([\\s\\S]*?)(?=\\n## |$)`);
+  const match = content.match(pattern);
+  return match ? match[1].trim() : "";
+}
+
+function escapeRegExp(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 function extractHeading(content) {

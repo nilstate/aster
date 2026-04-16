@@ -20,6 +20,47 @@ export function evaluatePublicPullRequestCandidate({
   };
 }
 
+export function evaluatePublicCommentOpportunity({
+  source,
+  lane,
+  authorLogin,
+  authorAssociation,
+  title,
+  labels,
+  headRefName,
+  commentsCount,
+  reviewCommentsCount,
+  recentOutcomes = [],
+}) {
+  const reasons = [];
+  const pullRequestPolicy = evaluatePublicPullRequestCandidate({
+    authorLogin,
+    title,
+    labels,
+    headRefName,
+  });
+  reasons.push(...pullRequestPolicy.reasons);
+
+  const welcomeSignal = hasWelcomeSignal({
+    source,
+    authorAssociation,
+    commentsCount,
+    reviewCommentsCount,
+  });
+  if (source === "github_pull_request" && lane === "issue-triage" && !welcomeSignal) {
+    reasons.push("comment_without_welcome_signal");
+  }
+  if (isCommentLaneInTrustRecovery({ lane, recentOutcomes })) {
+    reasons.push("comment_lane_in_trust_recovery");
+  }
+
+  return {
+    blocked: reasons.length > 0,
+    reasons,
+    welcome_signal: welcomeSignal,
+  };
+}
+
 export function isBotLogin(value) {
   const login = String(value ?? "").trim().toLowerCase();
   if (!login) {
@@ -72,6 +113,33 @@ export function normalizeLabels(labels) {
       .map((label) => String(label ?? "").trim().toLowerCase())
       .filter(Boolean)
     : [];
+}
+
+export function hasWelcomeSignal({
+  source,
+  authorAssociation,
+  commentsCount,
+  reviewCommentsCount,
+}) {
+  if (source !== "github_pull_request") {
+    return true;
+  }
+  if (["OWNER", "MEMBER", "COLLABORATOR", "CONTRIBUTOR"].includes(String(authorAssociation ?? "").toUpperCase())) {
+    return true;
+  }
+  return Number(commentsCount ?? 0) + Number(reviewCommentsCount ?? 0) > 0;
+}
+
+export function isCommentLaneInTrustRecovery({ lane, recentOutcomes }) {
+  if (lane !== "issue-triage") {
+    return false;
+  }
+  return Array.isArray(recentOutcomes)
+    && recentOutcomes.some((entry) => isSevereOutcomeStatus(entry?.status));
+}
+
+export function isSevereOutcomeStatus(value) {
+  return ["spam", "minimized", "harmful"].includes(String(value ?? "").trim().toLowerCase());
 }
 
 const DEPENDENCY_LABELS = new Set([

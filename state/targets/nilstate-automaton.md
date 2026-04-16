@@ -1,6 +1,6 @@
 ---
 title: Target Dossier — nilstate/automaton
-updated: 2026-04-16
+updated: 2026-04-17
 visibility: public
 subject_kind: github_repository
 subject_locator: nilstate/automaton
@@ -21,9 +21,15 @@ line.
 - `proving-ground`
 - `sourcey-refresh` during migration
 
+## Current Opportunities
+
+- `issue-triage`: keep issue and PR routing bounded, deduped, and legible before any worker mutation starts.
+- `skill-lab`: turn repeated operator friction into explicit, reusable skill proposals instead of letting it stay tribal knowledge.
+- `proving-ground`: keep receipts, evidence routing, and projection honesty under stress while the operator hardens itself.
+- `sourcey-refresh`: maintain the transitional docs surface only while `site/` fully owns the public face.
+
 ## Trust Notes
 
 - repo-local changes are high-confidence when scoped cleanly
 - public narrative must remain subordinate to receipts and committed state
 - changes that alter workflow publication rules deserve extra care
-

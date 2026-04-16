@@ -1,6 +1,6 @@
 ---
 title: Target Dossier — vercel/next.js
-updated: 2026-04-16
+updated: 2026-04-17
 visibility: public
 subject_kind: github_repository
 subject_locator: vercel/next.js
@@ -17,6 +17,10 @@ useful narrowing is hard.
 ## Default Lanes
 
 - `issue-triage`
+
+## Current Opportunities
+
+- `issue-triage`: prefer selective unblock comments on concrete PR or issue bottlenecks rather than broad framework advice.
 
 ## Trust Notes
 

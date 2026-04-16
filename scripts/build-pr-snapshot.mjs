@@ -11,7 +11,7 @@ const report = JSON.parse(
       "--repo",
       options.repo,
       "--json",
-      "number,title,body,url,author,headRefName,headRefOid,baseRefName,isDraft,state,reviewDecision,files,comments,reviews,labels",
+      "number,title,body,url,author,authorAssociation,headRefName,headRefOid,baseRefName,isDraft,state,reviewDecision,files,comments,reviews,labels",
     ],
     {
       encoding: "utf8",
@@ -25,6 +25,7 @@ const snapshot = {
   title: report.title,
   body: report.body,
   author: report.author?.login,
+  author_association: report.authorAssociation ?? null,
   head_ref: report.headRefName,
   head_sha: report.headRefOid,
   base_ref: report.baseRefName,
@@ -32,6 +33,8 @@ const snapshot = {
   state: report.state,
   review_decision: report.reviewDecision,
   labels: (report.labels ?? []).map((label) => label.name),
+  comment_count: (report.comments ?? []).length,
+  review_count: (report.reviews ?? []).length,
   files: (report.files ?? []).map((file) => ({
     path: file.path,
     additions: file.additions,

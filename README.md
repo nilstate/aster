@@ -141,11 +141,18 @@ the draft-first observability lanes continue to run.
 
 ## Local Validation
 
+For the public face and repo-owned operator state:
+
 ```bash
 npm run check
-npm run docs:build
 npm --prefix site install
 npm run site:build
+```
+
+If you are touching the transitional working-docs surface as well:
+
+```bash
+npm run docs:build
 ```
 
 Run the live proving-ground lane locally from this repo:

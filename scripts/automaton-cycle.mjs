@@ -5,7 +5,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { slugifyRepoLike } from "./build-automaton-context.mjs";
-import { evaluatePublicPullRequestCandidate } from "./public-work-policy.mjs";
+import { evaluatePublicCommentOpportunity } from "./public-work-policy.mjs";
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const defaultRepoRoot = path.resolve(scriptDir, "..");
@@ -105,6 +105,7 @@ export async function loadScoringPolicy(filePath) {
       success: extractCooldown(raw, ["completed", "success", "merged", "published"], 72),
       ignored: extractCooldown(raw, ["noop", "ignored", "stale", "silence"], 24 * 7),
       rejected: extractCooldown(raw, ["rejected", "corrected"], 24 * 21),
+      severe: extractCooldown(raw, ["spam", "minimized", "harmful"], 24 * 90),
       failed: extractCooldown(raw, ["failed", "error"], 24),
     },
   };
@@ -164,6 +165,8 @@ export function discoverOpportunities({ repo, discovery, dossiers, memory, now }
         is_external: !isInternalAssociation(pr.authorAssociation ?? pr.author_association),
         body_length: String(pr.body ?? "").length,
         labels: normalizeCollection(pr.labels),
+        comments_count: Number(pr.comments ?? pr.comments_count ?? 0),
+        review_comments_count: Number(pr.reviewComments ?? pr.review_comments_count ?? 0),
         updated_at: updatedAt,
         age_days: ageDays(now, updatedAt),
         stale_days: ageDays(now, updatedAt),
@@ -259,14 +262,20 @@ export function scoreOpportunity({ opportunity, dossiers, memory, policy, now, o
   if (operatorMemoryBranch && openOperatorMemoryBranches.includes(operatorMemoryBranch)) {
     veto_reasons.push("open_operator_memory_pr");
   }
-  if (opportunity.source === "github_pull_request") {
-    const publicPrPolicy = evaluatePublicPullRequestCandidate({
+  if (opportunity.lane === "issue-triage") {
+    const publicCommentPolicy = evaluatePublicCommentOpportunity({
+      source: opportunity.source,
+      lane: opportunity.lane,
       authorLogin: opportunity.author_login,
+      authorAssociation: opportunity.author_association,
       title: opportunity.title,
       labels: opportunity.labels,
       headRefName: opportunity.head_ref_name,
+      commentsCount: opportunity.comments_count,
+      reviewCommentsCount: opportunity.review_comments_count,
+      recentOutcomes,
     });
-    veto_reasons.push(...publicPrPolicy.reasons);
+    veto_reasons.push(...publicCommentPolicy.reasons);
   }
   if (cooldown.active) {
     veto_reasons.push(`cooldown:${cooldown.reason}`);
@@ -433,7 +442,7 @@ async function fetchGitHubDiscovery(repos, options) {
       "api",
       `repos/${repo}/pulls?state=open&per_page=${String(options.maxPrs ?? 20)}`,
       "--jq",
-      "[ .[] | { number, title, body, url: .html_url, isDraft: (.draft // false), author: { login: .user.login }, authorAssociation: .author_association, createdAt: .created_at, updatedAt: .updated_at, headRefName: .head.ref, baseRefName: .base.ref, labels: [ .labels[]?.name ] } ]",
+      "[ .[] | { number, title, body, url: .html_url, isDraft: (.draft // false), author: { login: .user.login }, authorAssociation: .author_association, createdAt: .created_at, updatedAt: .updated_at, headRefName: .head.ref, baseRefName: .base.ref, labels: [ .labels[]?.name ], comments: (.comments // 0), reviewComments: (.review_comments // 0) } ]",
     ]));
     discovery[repo] = { issues, prs };
   }
@@ -459,6 +468,7 @@ async function loadTargetDossiers(targetDir) {
       path: filePath,
       subject_locator: locator,
       default_lanes: parseSectionCodeList(content, "Default Lanes"),
+      current_opportunities: parseCurrentOpportunities(content),
       recent_outcomes: parseRecentOutcomes(content),
       trust_notes: parseSectionBullets(content, "Trust Notes"),
     };
@@ -546,8 +556,8 @@ function computeStrangerValue(opportunity) {
     return clamp(base + Math.min(opportunity.stale_days / 60, 0.08));
   }
   if (opportunity.source === "github_pull_request") {
-    const base = opportunity.is_external ? 0.84 : 0.62;
-    return clamp(base + Math.min(opportunity.stale_days / 45, 0.06));
+    const base = opportunity.is_external ? 0.72 : 0.54;
+    return clamp(base + Math.min(opportunity.stale_days / 45, 0.04));
   }
   if (opportunity.lane === "sourcey-refresh") {
     return clamp(0.48 + Math.min(opportunity.stale_days / 90, 0.22));
@@ -560,7 +570,7 @@ function computeStrangerValue(opportunity) {
 
 function computeProofStrength(opportunity) {
   if (opportunity.source === "github_pull_request") {
-    return 0.96;
+    return 0.88;
   }
   if (opportunity.source === "github_issue") {
     return 0.92;
@@ -585,6 +595,9 @@ function computeCompoundingValue(opportunity, dossier) {
   if (dossier?.default_lanes?.includes(opportunity.lane)) {
     score += 0.05;
   }
+  if (dossier?.current_opportunities?.some((entry) => entry.lane === opportunity.lane)) {
+    score += 0.07;
+  }
   if (opportunity.lane === "issue-triage") {
     score += 0.04;
   }
@@ -593,9 +606,12 @@ function computeCompoundingValue(opportunity, dossier) {
 
 function computeTractability(opportunity) {
   if (opportunity.source === "github_pull_request") {
-    let score = opportunity.is_draft ? 0.63 : 0.78;
+    let score = opportunity.is_draft ? 0.56 : 0.7;
     if (opportunity.body_length < 1600) {
-      score += 0.05;
+      score += 0.04;
+    }
+    if (Number(opportunity.comments_count ?? 0) + Number(opportunity.review_comments_count ?? 0) > 0) {
+      score += 0.04;
     }
     return clamp(score);
   }
@@ -628,7 +644,7 @@ function computeNovelty(opportunity, recentOutcomes, memoryRecords, recentLaneEx
 function computeMaintenanceEfficiency(opportunity) {
   if (opportunity.lane === "issue-triage") {
     if (opportunity.source === "github_pull_request") {
-      return 0.82;
+      return 0.58;
     }
     return 0.76;
   }
@@ -881,6 +897,30 @@ function parseSectionBullets(content, heading) {
     .map((line) => line.replace(/^-+\s*/, "").trim());
 }
 
+function parseCurrentOpportunities(content) {
+  const section = matchSection(content, "Current Opportunities");
+  if (!section) {
+    return [];
+  }
+  return section
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line.startsWith("-"))
+    .map((line) => {
+      const laneMatch = line.match(/^- `([^`]+)`:\s*(.+)$/);
+      if (laneMatch) {
+        return {
+          lane: laneMatch[1],
+          summary: laneMatch[2].trim(),
+        };
+      }
+      return {
+        lane: null,
+        summary: line.replace(/^-+\s*/, "").trim(),
+      };
+    });
+}
+
 function parseRecentOutcomes(content) {
   const section = matchSection(content, "Recent Outcomes");
   if (!section) {
@@ -892,12 +932,17 @@ function parseRecentOutcomes(content) {
     .map((line) => line.trim())
     .filter((line) => line.startsWith("-"))
     .map((line) => {
-      const match = line.match(/^- ([0-9-]+) · `([^`]+)` · `([^`]+)` · (.+)$/);
-      if (!match) {
+      const withReceipt = line.match(/^- ([0-9-]+) · `([^`]+)` · `([^`]+)` · `([^`]+)` · (.+)$/);
+      if (withReceipt) {
+        const [, date, lane, status, receipt_id, summary] = withReceipt;
+        return { date, lane, status, receipt_id, summary };
+      }
+      const withoutReceipt = line.match(/^- ([0-9-]+) · `([^`]+)` · `([^`]+)` · (.+)$/);
+      if (!withoutReceipt) {
         return null;
       }
-      const [, date, lane, status, summary] = match;
-      return { date, lane, status, summary };
+      const [, date, lane, status, summary] = withoutReceipt;
+      return { date, lane, status, receipt_id: null, summary };
     })
     .filter(Boolean);
 }
@@ -934,6 +979,9 @@ function mapCooldownStatus(status) {
   }
   if (["rejected", "corrected"].includes(normalized)) {
     return "rejected";
+  }
+  if (["spam", "minimized", "harmful"].includes(normalized)) {
+    return "severe";
   }
   if (["failed", "error"].includes(normalized)) {
     return "failed";

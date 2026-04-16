@@ -343,8 +343,24 @@ jobs:
             --pr "${{ github.event.inputs.pr_number || github.event.pull_request.number }}" \
             > .artifacts/issue-triage/pr/pr-snapshot.json
 
-      - name: Run issue-triage on PR
+      - name: Evaluate PR public-value gate
         if: ${{ steps.preflight.outputs.enabled == 'true' && steps.target_scope.outputs.allowed == 'true' }}
+        id: pr_policy
+        run: |
+          TARGET_REPO="${{ github.event.inputs.target_repo || github.repository }}"
+          TARGET_SLUG="$(printf '%s' "$TARGET_REPO" | tr '[:upper:]/' '[:lower:]-')"
+          node scripts/check-issue-triage-pr-policy.mjs \
+            --snapshot "$GITHUB_WORKSPACE/.artifacts/issue-triage/pr/pr-snapshot.json" \
+            --dossier "$GITHUB_WORKSPACE/state/targets/$TARGET_SLUG.md" \
+            > "$GITHUB_WORKSPACE/.artifacts/issue-triage/pr/policy.json"
+          echo "allowed=$(jq -r 'if .allowed then \"true\" else \"false\" end' "$GITHUB_WORKSPACE/.artifacts/issue-triage/pr/policy.json")" >> "$GITHUB_OUTPUT"
+          if [ "$(jq -r '.allowed' "$GITHUB_WORKSPACE/.artifacts/issue-triage/pr/policy.json")" != "true" ]; then
+            echo "Issue-triage PR gate blocked this run." >> "$GITHUB_STEP_SUMMARY"
+            jq -r '.reasons[] | "- " + .' "$GITHUB_WORKSPACE/.artifacts/issue-triage/pr/policy.json" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Run issue-triage on PR
+        if: ${{ steps.preflight.outputs.enabled == 'true' && steps.target_scope.outputs.allowed == 'true' && steps.pr_policy.outputs.allowed == 'true' }}
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: |
@@ -368,7 +384,7 @@ jobs:
             --runner respond \
             --objective "Draft the next high-signal maintainer comment for this pull request" \
             --issue_snapshot "$(cat "$GITHUB_WORKSPACE/.artifacts/issue-triage/pr/pr-snapshot.json")" \
-            --maintainer_context "Comment as the automaton operator. Focus on scope drift, missing validation, scafld governance, and the clearest next unblock. This is a pull request thread, not a user support issue."
+            --maintainer_context "Comment as the automaton operator only when there is one concrete missing validation, reproduction gap, scope mismatch, or next unblock that is not already obvious in the thread. If the highest-value action is no public comment, keep it internal and do not invent a reply. This is a pull request thread, not a user support issue."
           node scripts/apply-automaton-promotions.mjs \
             --repo-root "$GITHUB_WORKSPACE" \
             --summary "$GITHUB_WORKSPACE/.artifacts/issue-triage/pr/core-summary.json" \
@@ -391,14 +407,14 @@ jobs:
             > "$GITHUB_WORKSPACE/.artifacts/issue-triage/pr/operator-memory-publish.json"
 
       - name: Materialize PR comment
-        if: ${{ steps.preflight.outputs.enabled == 'true' && steps.target_scope.outputs.allowed == 'true' }}
+        if: ${{ steps.preflight.outputs.enabled == 'true' && steps.target_scope.outputs.allowed == 'true' && steps.pr_policy.outputs.allowed == 'true' }}
         run: |
           node scripts/write-triage-comment.mjs \
             --input ".artifacts/issue-triage/pr/result.json" \
             --output ".artifacts/issue-triage/pr/comment.md"
 
       - name: Post PR comment
-        if: ${{ steps.preflight.outputs.enabled == 'true' && steps.target_scope.outputs.allowed == 'true' }}
+        if: ${{ steps.preflight.outputs.enabled == 'true' && steps.target_scope.outputs.allowed == 'true' && steps.pr_policy.outputs.allowed == 'true' }}
         run: |
           TARGET_REPO="${{ github.event.inputs.target_repo || github.repository }}"
           node scripts/post-issue-triage-pr-comment.mjs \

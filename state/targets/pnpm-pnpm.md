@@ -1,6 +1,6 @@
 ---
 title: Target Dossier — pnpm/pnpm
-updated: 2026-04-16
+updated: 2026-04-17
 visibility: public
 subject_kind: github_repository
 subject_locator: pnpm/pnpm
@@ -17,6 +17,10 @@ test of whether automaton can help strangers without drifting into noise.
 ## Default Lanes
 
 - `issue-triage`
+
+## Current Opportunities
+
+- `issue-triage`: target install-state, workspace, and docs-clarity issues where a single bounded next step reduces maintainer load.
 
 ## Trust Notes
 

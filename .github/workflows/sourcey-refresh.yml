@@ -147,7 +147,7 @@ jobs:
           if [ "$(jq -r '.status' .artifacts/sourcey-refresh/publish.json)" != "published" ]; then
             exit 0
           fi
-          gh workflow run pr-triage.yml \
+          gh workflow run issue-triage.yml \
             --repo "${{ github.repository }}" \
             -f pr_number="$(jq -r '.pr_number' .artifacts/sourcey-refresh/publish.json)"
 

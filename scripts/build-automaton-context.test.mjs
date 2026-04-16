@@ -28,6 +28,8 @@ test("buildContextBundle loads doctrine, state, and target dossier", async () =>
   assert.equal(bundle.lane, "issue-triage");
   assert.equal(bundle.subject.kind, "github_issue");
   assert.equal(bundle.state.target?.title, "Target Dossier — nilstate/automaton");
+  assert.ok(bundle.state.target_summary?.default_lanes.includes("issue-triage"));
+  assert.ok(bundle.state.target_summary?.current_opportunities.length >= 1);
   assert.ok(bundle.doctrine.some((doc) => doc.title === "Automaton Thesis"));
   assert.ok(bundle.history.length >= 1);
   assert.ok(bundle.reflections.length >= 1);
@@ -47,5 +49,6 @@ test("renderContextPrompt includes doctrine and state sections", async () => {
   assert.match(prompt, /# Automaton Context Bundle/);
   assert.match(prompt, /## Doctrine/);
   assert.match(prompt, /## Current State/);
+  assert.match(prompt, /### Target Summary/);
   assert.match(prompt, /Target Dossier/);
 });

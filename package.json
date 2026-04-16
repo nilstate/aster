@@ -13,6 +13,6 @@
     "docs:ci": "npm run check && npm run docs:build",
     "site:check": "npm --prefix site run check",
     "site:build": "npm --prefix site run build",
-    "site:ci": "npm run check && npm run docs:build && npm run site:check && npm run site:build"
+    "site:ci": "npm run check && npm run site:check && npm run site:build"
   }
 }

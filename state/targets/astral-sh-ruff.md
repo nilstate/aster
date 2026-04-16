@@ -1,6 +1,6 @@
 ---
 title: Target Dossier — astral-sh/ruff
-updated: 2026-04-16
+updated: 2026-04-17
 visibility: public
 subject_kind: github_repository
 subject_locator: astral-sh/ruff
@@ -18,6 +18,10 @@ high-signal engineering repo.
 ## Default Lanes
 
 - `issue-triage`
+
+## Current Opportunities
+
+- `issue-triage`: focus on bounded lint, docs, or reproduction unblock comments where maintainer load is visible.
 
 ## Trust Notes
 

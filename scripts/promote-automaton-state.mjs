@@ -196,6 +196,9 @@ function buildHistoryDraft({ date, lane, contextBundle, packet }) {
   if (subject.pr_number) {
     lines.push(`pr_number: ${subject.pr_number}`);
   }
+  if (packet.receipt_id) {
+    lines.push(`receipt_id: ${packet.receipt_id}`);
+  }
   lines.push(
     "---",
     "",

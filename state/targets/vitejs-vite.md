@@ -1,6 +1,6 @@
 ---
 title: Target Dossier — vitejs/vite
-updated: 2026-04-16
+updated: 2026-04-17
 visibility: public
 subject_kind: github_repository
 subject_locator: vitejs/vite
@@ -16,6 +16,10 @@ and unblock comments can genuinely reduce maintainer load.
 ## Default Lanes
 
 - `issue-triage`
+
+## Current Opportunities
+
+- `issue-triage`: emphasize environment, reproduction, and docs clarification comments that narrow the next action quickly.
 
 ## Trust Notes
 

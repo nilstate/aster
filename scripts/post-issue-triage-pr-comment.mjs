@@ -1,7 +1,7 @@
 import { execFileSync } from "node:child_process";
 import { readFile } from "node:fs/promises";
 
-import { evaluatePublicPullRequestCandidate } from "./public-work-policy.mjs";
+import { evaluatePublicCommentOpportunity } from "./public-work-policy.mjs";
 
 const marker = "<!-- automaton:runx-issue-triage -->";
 const defaultRunner = (command, args) => execFileSync(command, args, { encoding: "utf8" });
@@ -47,21 +47,26 @@ export function buildCommentPlan({ options, body, runner = defaultRunner }) {
         "--repo",
         options.repo,
         "--json",
-        "title,author,headRefName,labels,comments",
+        "title,author,authorAssociation,headRefName,labels,comments,reviews",
       ],
     ),
   );
-  const publicPrPolicy = evaluatePublicPullRequestCandidate({
+  const publicCommentPolicy = evaluatePublicCommentOpportunity({
+    source: "github_pull_request",
+    lane: "issue-triage",
     authorLogin: report.author?.login,
+    authorAssociation: report.authorAssociation,
     title: report.title,
     labels: (report.labels ?? []).map((label) => label.name),
     headRefName: report.headRefName,
+    commentsCount: (report.comments ?? []).length,
+    reviewCommentsCount: (report.reviews ?? []).length,
   });
-  if (publicPrPolicy.blocked) {
+  if (publicCommentPolicy.blocked) {
     return {
       status: "noop",
-      reason: publicPrPolicy.reasons[0],
-      reasons: publicPrPolicy.reasons,
+      reason: publicCommentPolicy.reasons[0],
+      reasons: publicCommentPolicy.reasons,
     };
   }
 

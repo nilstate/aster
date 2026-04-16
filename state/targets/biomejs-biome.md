@@ -1,6 +1,6 @@
 ---
 title: Target Dossier — biomejs/biome
-updated: 2026-04-16
+updated: 2026-04-17
 visibility: public
 subject_kind: github_repository
 subject_locator: biomejs/biome
@@ -17,6 +17,10 @@ advice.
 ## Default Lanes
 
 - `issue-triage`
+
+## Current Opportunities
+
+- `issue-triage`: stay with exact repro, config, or docs clarification comments instead of broad formatter or linter debates.
 
 ## Trust Notes
 

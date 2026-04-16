@@ -39,9 +39,11 @@ test("buildCommentPlan includes marker and sha for eligible PRs", () => {
       return JSON.stringify({
         title: "docs: fix broken example",
         author: { login: "outside-dev" },
+        authorAssociation: "CONTRIBUTOR",
         headRefName: "docs/fix-example",
         labels: [{ name: "documentation" }],
         comments: [],
+        reviews: [],
       });
     },
   });
@@ -63,6 +65,7 @@ test("buildCommentPlan noops when the exact marker and head sha already exist", 
       return JSON.stringify({
         title: "docs: fix broken example",
         author: { login: "outside-dev" },
+        authorAssociation: "CONTRIBUTOR",
         headRefName: "docs/fix-example",
         labels: [{ name: "documentation" }],
         comments: [
@@ -70,10 +73,36 @@ test("buildCommentPlan noops when the exact marker and head sha already exist", 
             body: "<!-- automaton:runx-issue-triage -->\nUseful bounded comment\n\nHead SHA: abc1234",
           },
         ],
+        reviews: [],
       });
     },
   });
 
   assert.equal(plan.status, "noop");
   assert.equal(plan.reason, "comment already exists");
+});
+
+test("buildCommentPlan noops when a human PR has no welcome signal", () => {
+  const plan = buildCommentPlan({
+    options: {
+      repo: "vercel/next.js",
+      pr: "102",
+      sha: "abc9999",
+    },
+    body: "Useful bounded comment",
+    runner() {
+      return JSON.stringify({
+        title: "docs: fix typo",
+        author: { login: "first-timer" },
+        authorAssociation: "NONE",
+        headRefName: "docs/fix-typo",
+        labels: [{ name: "documentation" }],
+        comments: [],
+        reviews: [],
+      });
+    },
+  });
+
+  assert.equal(plan.status, "noop");
+  assert.match(plan.reasons.join(","), /comment_without_welcome_signal/);
 });

@@ -6,16 +6,27 @@ import { mkdtemp, mkdir, readFile, writeFile } from "node:fs/promises";
 
 import {
   applyAutomatonPromotions,
+  upsertFrontmatterField,
   upsertRecentOutcomesSection,
 } from "./apply-automaton-promotions.mjs";
 
 test("upsertRecentOutcomesSection prepends and dedupes recent outcomes", () => {
   const initial = "# Target\n\n## Why It Matters\n\ntext\n";
-  const once = upsertRecentOutcomesSection(initial, "- 2026-04-16 · `lane` · `completed` · summary");
-  const twice = upsertRecentOutcomesSection(once, "- 2026-04-16 · `lane` · `completed` · summary");
+  const once = upsertRecentOutcomesSection(initial, "- 2026-04-16 · `lane` · `completed` · `rcpt_123` · summary");
+  const twice = upsertRecentOutcomesSection(once, "- 2026-04-16 · `lane` · `completed` · `rcpt_123` · summary");
 
   assert.match(once, /## Recent Outcomes/);
   assert.equal((twice.match(/summary/g) ?? []).length, 1);
+});
+
+test("upsertFrontmatterField updates existing frontmatter values", () => {
+  const updated = upsertFrontmatterField(
+    ["---", "title: Target", "updated: 2026-04-16", "---", "", "# Target"].join("\n"),
+    "updated",
+    "2026-04-17",
+  );
+
+  assert.match(updated, /updated: 2026-04-17/);
 });
 
 test("applyAutomatonPromotions copies drafts and updates target dossier", async () => {
@@ -41,6 +52,7 @@ test("applyAutomatonPromotions copies drafts and updates target dossier", async 
         created_at: "2026-04-16T00:00:00Z",
         lane: "issue-triage",
         status: "completed",
+        receipt_id: "rcpt_123",
         summary: "README command drift",
         subject: {
           target_repo: "nilstate/automaton",
@@ -72,7 +84,9 @@ test("applyAutomatonPromotions copies drafts and updates target dossier", async 
 
   const dossier = await readFile(path.join(repoRoot, "state", "targets", "nilstate-automaton.md"), "utf8");
   assert.equal(result.status, "applied");
+  assert.match(dossier, /updated: 2026-04-16/);
   assert.match(dossier, /## Recent Outcomes/);
+  assert.match(dossier, /rcpt_123/);
   assert.match(dossier, /README command drift/);
   assert.match(await readFile(path.join(repoRoot, "reflections", "reflection.md"), "utf8"), /# Reflection/);
   assert.match(await readFile(path.join(repoRoot, "history", "entry.md"), "utf8"), /# History/);

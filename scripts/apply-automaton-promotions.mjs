@@ -80,7 +80,11 @@ async function updateTargetRecentOutcomes({ dossierPath, packet }) {
   }
 
   const outcomeLine = buildOutcomeLine(packet);
-  const next = upsertRecentOutcomesSection(content, outcomeLine);
+  const next = upsertFrontmatterField(
+    upsertRecentOutcomesSection(content, outcomeLine),
+    "updated",
+    firstString(packet?.created_at).slice(0, 10) || new Date().toISOString().slice(0, 10),
+  );
   if (next === content) {
     return false;
   }
@@ -133,12 +137,40 @@ export function upsertRecentOutcomesSection(content, outcomeLine) {
   return `${trimmed}\n\n${section}`;
 }
 
+export function upsertFrontmatterField(content, key, value) {
+  if (!content.startsWith("---\n")) {
+    return content;
+  }
+  const end = content.indexOf("\n---\n", 4);
+  if (end === -1) {
+    return content;
+  }
+  const block = content.slice(4, end).split("\n");
+  let found = false;
+  const nextBlock = block.map((line) => {
+    if (!line.startsWith(`${key}:`)) {
+      return line;
+    }
+    found = true;
+    return `${key}: ${value}`;
+  });
+  if (!found) {
+    nextBlock.push(`${key}: ${value}`);
+  }
+  return `---\n${nextBlock.join("\n")}\n---\n${content.slice(end + 5)}`;
+}
+
 function buildOutcomeLine(packet) {
   const date = firstString(packet?.created_at).slice(0, 10) || new Date().toISOString().slice(0, 10);
   const lane = firstString(packet?.lane) || "unknown-lane";
   const status = firstString(packet?.status) || "unknown";
+  const receiptId = firstString(packet?.receipt_id);
   const summary = firstString(packet?.summary) || "operator run completed";
-  return `- ${date} · \`${lane}\` · \`${status}\` · ${summary}`;
+  const parts = [`- ${date}`, `\`${lane}\``, `\`${status}\``];
+  if (receiptId) {
+    parts.push(`\`${receiptId}\``);
+  }
+  return `${parts.join(" · ")} · ${summary}`;
 }
 
 function parseArgs(argv) {

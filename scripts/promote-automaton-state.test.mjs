@@ -50,6 +50,7 @@ test("buildPromotionDrafts creates reflection and history drafts", () => {
   assert.match(drafts.reflection.filename, /^2026-04-16-issue-triage-/);
   assert.match(drafts.reflection.content, /## What Happened/);
   assert.match(drafts.reflection.content, /rcpt_123/);
+  assert.match(drafts.history.content, /receipt_id: rcpt_123/);
   assert.match(drafts.history.content, /README command drift/);
   assert.equal(drafts.packet.receipt_id, "rcpt_123");
 });

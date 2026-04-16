@@ -18,11 +18,13 @@ const required = [
   "docs/skill-contribution.md",
   "docs/operations.md",
   "schemas/skill-contribution-artifacts.schema.json",
+  "schemas/skill-contribution-state.schema.json",
   "scripts/runx-dogfood.sh",
   "scripts/runx-agent-bridge.mjs",
   "scripts/sourcey-wrapper.sh",
   "scripts/prepare-skill-contribution.mjs",
   "scripts/validate-skill-contribution.mjs",
+  "scripts/watch-skill-contribution.mjs",
   "scripts/prepare-issue-supervisor-decision.mjs",
   "scripts/run-issue-supervisor-plan.mjs",
   "scripts/post-issue-supervisor-comment.mjs",
@@ -36,6 +38,7 @@ const required = [
   ".github/workflows/pr-triage.yml",
   ".github/workflows/skill-learning.yml",
   ".github/workflows/skill-contribution.yml",
+  ".github/workflows/skill-contribution-watch.yml",
 ];
 
 for (const relativePath of required) {

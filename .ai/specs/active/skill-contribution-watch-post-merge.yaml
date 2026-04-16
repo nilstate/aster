@@ -1,0 +1,224 @@
+spec_version: "1.1"
+task_id: "skill-contribution-watch-post-merge"
+created: "2026-04-16T01:35:44Z"
+updated: "2026-04-16T01:35:44Z"
+status: "completed"
+
+task:
+  title: "Watch merged upstream skill contributions"
+  summary: >
+    Add the post-merge watcher lane for upstream SKILL.md contributions so
+    automaton can detect accepted, rejected, or stale PRs and hand merged
+    upstream skills to runx registry binding with pinned source metadata.
+  size: "medium"
+  risk_level: "medium"
+  context:
+    packages:
+      - "automaton"
+    files_impacted:
+      - path: "scripts/watch-skill-contribution.mjs"
+        lines: "all"
+        reason: "Read GitHub PR state and emit state, proof, and binding-request artifacts"
+      - path: ".github/workflows/skill-contribution-watch.yml"
+        lines: "all"
+        reason: "Hosted scheduled/manual watcher lane"
+      - path: ".github/workflows/publish-public-evidence.yml"
+        lines: "all"
+        reason: "Relay generic workflow completion as upstream-skill proof"
+      - path: "schemas/skill-contribution-state.schema.json"
+        lines: "all"
+        reason: "Machine-readable state packet"
+      - path: "docs/skill-contribution.md"
+        lines: "all"
+        reason: "Operator documentation for the watch lane"
+    invariants:
+      - "External repos receive SKILL.md only"
+      - "Watcher is read-only against upstream repos"
+      - "Merged upstream source is pinned before registry binding"
+    related_docs:
+      - "docs/skill-contribution.md"
+      - "../runx/docs/skill-learning-contribution-spec.md"
+  objectives:
+    - "Classify upstream PRs into maintainer_review, accepted_upstream, rejected_upstream, or stale_upstream"
+    - "Emit registry_binding_request.json for merged upstream skills"
+    - "Publish proof-wall evidence with exact PR, commit, blob, and check metadata"
+  scope:
+    in_scope:
+      - "watch script, workflow, schema, docs, and public evidence lane mapping"
+    out_of_scope:
+      - "Registry publication itself"
+      - "Maintainer follow-up comment automation"
+      - "Persistent database tracking"
+  dependencies:
+    - "GitHub CLI available in hosted runner"
+    - "nilstate/icey-cli PR #2 merged"
+  assumptions:
+    - "GH_TOKEN can read upstream PR and contents metadata"
+    - "RUNX_PUBLIC_EVIDENCE_TOKEN is available for enriched proof publishing in automaton"
+  touchpoints:
+    - area: "GitHub Actions"
+      description: "New scheduled/manual workflow observes upstream contribution state"
+    - area: "public evidence"
+      description: "Watch lane maps to upstream-skill metadata"
+  risks:
+    - description: "Duplicate proof rows from direct enriched publish and workflow_run relay"
+      impact: "low"
+      mitigation: "Direct row carries rich metadata; generic relay remains fallback"
+    - description: "Scheduled default watches only the first dogfood PR"
+      impact: "low"
+      mitigation: "Persistent tracking is explicitly listed as next hardening"
+  acceptance:
+    validation_profile: "standard"
+    definition_of_done:
+      - id: "dod1"
+        description: "Local watcher classifies nilstate/icey-cli#2 as accepted_upstream"
+        status: "done"
+        checked_at: "2026-04-16T01:29:28Z"
+      - id: "dod2"
+        description: "Watcher writes state, feed, and registry binding request artifacts"
+        status: "done"
+        checked_at: "2026-04-16T01:29:28Z"
+      - id: "dod3"
+        description: "Workflow and public evidence relay include skill-contribution-watch"
+        status: "done"
+        checked_at: "2026-04-16T01:35:44Z"
+    validation:
+      - id: "v1"
+        type: "compile"
+        description: "Watch script syntax is valid"
+        command: "node --check scripts/watch-skill-contribution.mjs"
+        expected: "Exit code 0"
+      - id: "v2"
+        type: "integration"
+        description: "Watcher observes merged icey-cli PR"
+        command: "node scripts/watch-skill-contribution.mjs --repo nilstate/icey-cli --pr 2 --candidate-path SKILL.md --registry-owner nilstate --artifacts-dir .artifacts/skill-contribution-watch/icey-cli"
+        expected: "state accepted_upstream and registry_binding_request true"
+      - id: "v3"
+        type: "custom"
+        description: "Workflow and schemas parse"
+        command: "python3 -c \"import json, yaml; [yaml.safe_load(open(p)) for p in ['.github/workflows/skill-contribution-watch.yml','.github/workflows/publish-public-evidence.yml']]; [json.load(open(p)) for p in ['schemas/skill-contribution-state.schema.json','schemas/skill-contribution-artifacts.schema.json']]; print('workflow/schema ok')\""
+        expected: "workflow/schema ok"
+  notes: >
+    The lane is intentionally small and factual. It records upstream state and
+    produces the handoff artifact; runx owns the registry binding execution.
+
+planning_log:
+  - timestamp: "2026-04-16T01:18:46Z"
+    actor: "user"
+    summary: "User merged nilstate/icey-cli#2."
+  - timestamp: "2026-04-16T01:29:28Z"
+    actor: "agent"
+    summary: "Local watcher classified the PR as accepted_upstream and produced binding request artifacts."
+  - timestamp: "2026-04-16T01:35:44Z"
+    actor: "agent"
+    summary: "Watch workflow, schema, docs, and evidence mapping completed."
+
+phases:
+  - id: "phase1"
+    name: "Implement watcher"
+    objective: "Read upstream PR state and materialize state/proof/binding-request artifacts."
+    changes:
+      - file: "scripts/watch-skill-contribution.mjs"
+        action: "create"
+        lines: "all"
+        content_spec: "Use gh to read PR state, checks, files, merge commit, and upstream SKILL.md content metadata."
+      - file: "schemas/skill-contribution-state.schema.json"
+        action: "create"
+        lines: "all"
+        content_spec: "Describe skill_contribution_state.json shape."
+    acceptance_criteria:
+      - id: "ac1_1"
+        type: "integration"
+        description: "Watcher observes accepted upstream PR"
+        command: "node scripts/watch-skill-contribution.mjs --repo nilstate/icey-cli --pr 2 --candidate-path SKILL.md --registry-owner nilstate --artifacts-dir .artifacts/skill-contribution-watch/icey-cli"
+        expected: "accepted_upstream"
+        result:
+          status: "pass"
+          timestamp: "2026-04-16T01:29:28Z"
+          output: "state accepted_upstream; skill_id nilstate/icey-server-operator"
+    status: "completed"
+
+  - id: "phase2"
+    name: "Deploy watch lane"
+    objective: "Expose watcher through GitHub Actions and proof-wall evidence."
+    dependencies:
+      - "phase1"
+    changes:
+      - file: ".github/workflows/skill-contribution-watch.yml"
+        action: "create"
+        lines: "all"
+        content_spec: "Manual and scheduled workflow that runs watcher, publishes enriched evidence, and uploads artifacts."
+      - file: ".github/workflows/publish-public-evidence.yml"
+        action: "update"
+        lines: "all"
+        content_spec: "Include skill-contribution-watch in workflow_run relay and map metadata lane to upstream-skill."
+    acceptance_criteria:
+      - id: "ac2_1"
+        type: "custom"
+        description: "Workflow YAML parses"
+        command: "python3 -c \"import yaml; [yaml.safe_load(open(p)) for p in ['.github/workflows/skill-contribution-watch.yml','.github/workflows/publish-public-evidence.yml']]; print('workflow ok')\""
+        expected: "workflow ok"
+        result:
+          status: "pass"
+          timestamp: "2026-04-16T01:29:28Z"
+          output: "workflow ok"
+    status: "completed"
+
+  - id: "phase3"
+    name: "Document operator flow"
+    objective: "Make watch lane visible in automaton docs and health checks."
+    dependencies:
+      - "phase2"
+    changes:
+      - file: "docs/skill-contribution.md"
+        action: "update"
+        lines: "all"
+        content_spec: "Explain watch artifacts, read-only boundary, and local dogfood command."
+      - file: "docs/run-catalog.md"
+        action: "update"
+        lines: "all"
+        content_spec: "Add skill-contribution-watch lane."
+      - file: "docs/operations.md"
+        action: "update"
+        lines: "all"
+        content_spec: "Record read-only upstream watcher policy."
+      - file: "scripts/check.mjs"
+        action: "update"
+        lines: "all"
+        content_spec: "Require watcher files in automaton health check."
+    acceptance_criteria:
+      - id: "ac3_1"
+        type: "test"
+        description: "Automaton file check passes"
+        command: "node scripts/check.mjs"
+        expected: "automaton check passed"
+        result:
+          status: "pass"
+          timestamp: "2026-04-16T01:29:28Z"
+          output: "automaton check passed"
+    status: "completed"
+
+rollback:
+  strategy: "per_phase"
+  commands:
+    phase1: "git checkout HEAD -- scripts/watch-skill-contribution.mjs schemas/skill-contribution-state.schema.json"
+    phase2: "git checkout HEAD -- .github/workflows/skill-contribution-watch.yml .github/workflows/publish-public-evidence.yml"
+    phase3: "git checkout HEAD -- docs/skill-contribution.md docs/run-catalog.md docs/operations.md scripts/check.mjs"
+
+self_eval:
+  completeness: 3
+  architecture_fidelity: 3
+  spec_alignment: 2
+  validation_depth: 2
+  total: 10
+  notes: "The watcher lane is implemented, validated locally, documented, and ready for remote dogfood."
+  second_pass_performed: true
+
+metadata:
+  estimated_effort_hours: 2
+  actual_effort_hours: 2
+  ai_model: "gpt-5"
+  tags:
+    - "skill-contribution"
+    - "upstream-skill"
+    - "proof-wall"

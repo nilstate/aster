@@ -54,6 +54,16 @@ This is the live run catalog for `automaton`.
 - output: target `SKILL.md`, contribution artifact packet, PR body, optional
   draft PR, public evidence row
 
+### `skill-contribution-watch`
+
+- trigger: scheduled and manual workflow dispatch
+- command: `node scripts/watch-skill-contribution.mjs`
+- purpose: observe upstream PR state after a portable `SKILL.md` contribution
+  and hand accepted skills to runx registry binding
+- first target: `nilstate/icey-cli#2`
+- output: `skill_contribution_state.json`, proof-wall event, and
+  `registry_binding_request.json` after upstream merge
+
 ## Continuous Support Lanes
 
 ### `docs-pages`

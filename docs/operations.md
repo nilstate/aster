@@ -28,6 +28,9 @@ Approvals stay explicit:
 - Skill-learning opens draft PRs only
 - Skill-contribution opens draft PRs only, and upstream changes are limited to
   portable `SKILL.md` unless a maintainer explicitly requests more
+- Skill-contribution-watch is read-only against upstream repos. It records PR
+  state, checks, merge commit, and upstream blob metadata, then emits an
+  internal registry-binding request after merge.
 
 ## Artifact policy
 
@@ -44,5 +47,6 @@ That makes failures diagnosable and keeps the trust boundary visible.
 - provider failover and key rotation
 - stronger evals for comment quality and PR usefulness
 - a merge and rollback policy for generated PRs
-- persistent tracking for upstream skill contribution state
+- persistent tracking for upstream skill contribution state beyond the current
+  artifact packet
 - persistent receipt indexing outside workflow artifacts

@@ -63,6 +63,25 @@ The workflow checks out `automaton`, checks out the target repo, prepares the
 portable skill contribution, validates the public-language and artifact gates,
 and optionally publishes a draft PR.
 
+## Watch Lane
+
+After a contribution PR exists, `skill-contribution-watch` owns the post-merge
+state transition. It reads the GitHub PR state, status checks, changed files,
+merge commit, and upstream `SKILL.md` blob metadata.
+
+The lane writes these artifacts under `.artifacts/skill-contribution-watch/`:
+
+- `skill_contribution_state.json`
+- `public_feed_event.json`
+- `registry_binding_request.json` when the PR reaches `accepted_upstream`
+
+The watcher is read-only against the external repo. It does not argue with
+maintainers and it does not add `x.yaml` upstream. Its job is to turn upstream
+state into a clean internal handoff: `accepted_upstream`,
+`rejected_upstream`, or `stale_upstream`.
+
+The hosted workflow is `.github/workflows/skill-contribution-watch.yml`.
+
 ## Dogfood Target
 
 The first target is `nilstate/icey-cli` because it has a concrete operator
@@ -131,6 +150,17 @@ node scripts/prepare-skill-contribution.mjs \
 node scripts/validate-skill-contribution.mjs \
   --target-repo-dir /home/kam/dev/icey-cli \
   --artifacts-dir .artifacts/skill-contribution/icey-cli
+```
+
+Watch the merged upstream PR and produce the binding handoff:
+
+```bash
+node scripts/watch-skill-contribution.mjs \
+  --repo nilstate/icey-cli \
+  --pr 2 \
+  --candidate-path SKILL.md \
+  --registry-owner nilstate \
+  --artifacts-dir .artifacts/skill-contribution-watch/icey-cli
 ```
 
 Publish only after reviewing the generated `SKILL.md` and PR body:

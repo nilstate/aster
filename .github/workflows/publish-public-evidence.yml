@@ -9,6 +9,7 @@ on:
       - pr-triage
       - runx-dogfood
       - skill-contribution
+      - skill-contribution-watch
       - skill-learning
       - sourcey-refresh
     types:
@@ -115,6 +116,8 @@ jobs:
                   return "automaton"
               if name == "skill-contribution":
                   return "skill-contribution"
+              if name == "skill-contribution-watch":
+                  return "upstream-skill"
               if "skill" in name:
                   return "skill-learning"
               if "triage" in name or "supervisor" in name:
@@ -134,6 +137,8 @@ jobs:
                   return f"Automaton dogfood or governance lane finished with {status}; workflow artifacts carry the receipt trail."
               if lane == "skill-contribution":
                   return f"Portable SKILL.md contribution lane finished with {status}; artifacts carry the upstream packet and validation proof."
+              if lane == "upstream-skill":
+                  return f"Upstream SKILL.md watch lane finished with {status}; artifacts carry the PR transition and registry-binding request when merged."
               return f"{workflow or 'automaton workflow'} finished with {status}; {checks} recorded."
 
           github_run_url = None

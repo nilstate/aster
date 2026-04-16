@@ -1,0 +1,179 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://runx.ai/schemas/skill-contribution-state.schema.json",
+  "title": "runx skill contribution state",
+  "type": "object",
+  "required": ["schema", "observed_at", "state", "target", "pull_request", "checks", "files", "transition"],
+  "properties": {
+    "schema": {
+      "const": "runx.skill_contribution_state.v1"
+    },
+    "observed_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "state": {
+      "enum": ["submitted_upstream", "maintainer_review", "accepted_upstream", "rejected_upstream", "stale_upstream"]
+    },
+    "target": {
+      "type": "object",
+      "required": ["repo", "path"],
+      "properties": {
+        "repo": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        },
+        "base": {
+          "type": "string"
+        },
+        "head": {
+          "type": "string"
+        },
+        "head_commit": {
+          "type": "string"
+        },
+        "merge_commit": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": true
+    },
+    "pull_request": {
+      "type": "object",
+      "required": ["number", "url", "state"],
+      "properties": {
+        "number": {
+          "type": "number"
+        },
+        "title": {
+          "type": "string"
+        },
+        "url": {
+          "type": "string"
+        },
+        "state": {
+          "type": "string"
+        },
+        "is_draft": {
+          "type": "boolean"
+        },
+        "merged_at": {
+          "type": "string"
+        },
+        "review_decision": {
+          "type": "string"
+        },
+        "author": {
+          "type": "string"
+        },
+        "updated_at": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": true
+    },
+    "checks": {
+      "type": "object",
+      "required": ["total", "completed", "passed", "failed", "pending", "conclusion", "items"],
+      "properties": {
+        "total": {
+          "type": "number"
+        },
+        "completed": {
+          "type": "number"
+        },
+        "passed": {
+          "type": "number"
+        },
+        "failed": {
+          "type": "number"
+        },
+        "pending": {
+          "type": "number"
+        },
+        "conclusion": {
+          "enum": ["success", "failure", "pending"]
+        },
+        "failure_reason": {
+          "type": "string"
+        },
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        }
+      },
+      "additionalProperties": true
+    },
+    "files": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["path"],
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "additions": {
+            "type": "number"
+          },
+          "deletions": {
+            "type": "number"
+          },
+          "change_type": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "upstream_skill": {
+      "type": "object",
+      "required": ["name", "path", "commit", "blob_sha"],
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        },
+        "commit": {
+          "type": "string"
+        },
+        "blob_sha": {
+          "type": "string"
+        },
+        "size": {
+          "type": "number"
+        },
+        "html_url": {
+          "type": "string"
+        },
+        "raw_url": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": true
+    },
+    "transition": {
+      "type": "object",
+      "required": ["to", "reason"],
+      "properties": {
+        "to": {
+          "type": "string"
+        },
+        "reason": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": true
+}

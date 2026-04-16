@@ -26,6 +26,14 @@ jobs:
           path: runx
           token: ${{ secrets.RUNX_REPOSITORY_PAT != '' && secrets.RUNX_REPOSITORY_PAT || secrets.RUNX_WORKSPACE_PAT != '' && secrets.RUNX_WORKSPACE_PAT || github.token }}
 
+      - name: Materialize runx OSS submodule
+        env:
+          RUNX_REPOSITORY_TOKEN: ${{ secrets.RUNX_REPOSITORY_PAT != '' && secrets.RUNX_REPOSITORY_PAT || secrets.RUNX_WORKSPACE_PAT != '' && secrets.RUNX_WORKSPACE_PAT || github.token }}
+        run: |
+          git -C runx config url."https://x-access-token:${RUNX_REPOSITORY_TOKEN}@github.com/".insteadOf "git@github.com:"
+          git -C runx submodule sync -- oss
+          git -C runx submodule update --init --depth 1 oss
+
       - name: Set up Node.js
         uses: actions/setup-node@v6
         with:

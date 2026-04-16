@@ -40,3 +40,12 @@ the same head SHA.
 Listens for issues whose title begins with `[skill]`, runs
 `objective-to-skill`, materializes the result under `docs/skill-proposals/`,
 and opens a draft PR with the generated proposal.
+
+## `skill-contribution`
+
+Runs on manual dispatch for an external target repo. The workflow checks out
+the target, prepares a portable upstream `SKILL.md`, validates the contribution
+artifacts and public language, uploads the artifact packet, and optionally
+opens a draft PR against the target repo.
+
+The first dogfood target is `nilstate/icey-cli`.

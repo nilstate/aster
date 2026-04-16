@@ -8,6 +8,7 @@ on:
       - issue-supervisor
       - pr-triage
       - runx-dogfood
+      - skill-contribution
       - skill-learning
       - sourcey-refresh
     types:
@@ -112,6 +113,8 @@ jobs:
                   return "sourcey"
               if "dogfood" in name:
                   return "automaton"
+              if name == "skill-contribution":
+                  return "skill-contribution"
               if "skill" in name:
                   return "skill-learning"
               if "triage" in name or "supervisor" in name:
@@ -129,6 +132,8 @@ jobs:
                   return f"Sourcey refresh ran through runx with {status}; draft PR/artifacts are linked from the workflow."
               if lane == "automaton":
                   return f"Automaton dogfood or governance lane finished with {status}; workflow artifacts carry the receipt trail."
+              if lane == "skill-contribution":
+                  return f"Portable SKILL.md contribution lane finished with {status}; artifacts carry the upstream packet and validation proof."
               return f"{workflow or 'automaton workflow'} finished with {status}; {checks} recorded."
 
           github_run_url = None
@@ -151,7 +156,7 @@ jobs:
               "commit_short": (trim(os.environ.get("RUNX_PUBLIC_EVIDENCE_COMMIT")) or trim(os.environ.get("GITHUB_SHA")) or "")[:12],
               "run_id": trim(os.environ.get("RUNX_PUBLIC_EVIDENCE_RUN_ID")),
               "workflow": workflow,
-              "model": trim(os.environ.get("RUNX_CALLER_MODEL")) if proof_lane(workflow) in {"sourcey", "automaton", "skill-learning"} else None,
+              "model": trim(os.environ.get("RUNX_CALLER_MODEL")) if proof_lane(workflow) in {"sourcey", "automaton", "skill-learning", "skill-contribution"} else None,
               "github_run_id": trim(os.environ.get("GITHUB_RUN_ID")),
               "github_run_attempt": trim(os.environ.get("GITHUB_RUN_ATTEMPT")),
               "github_job": trim(os.environ.get("GITHUB_JOB")),

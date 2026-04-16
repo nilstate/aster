@@ -26,7 +26,7 @@ export default {
           },
           {
             group: "Operate",
-            pages: ["operating-model", "flows", "operations"],
+            pages: ["operating-model", "flows", "skill-contribution", "operations"],
           },
           {
             group: "Reference",

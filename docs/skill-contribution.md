@@ -1,0 +1,132 @@
+---
+title: Skill Contribution
+description: The upstream SKILL.md contribution lane from candidate artifact to draft PR.
+---
+
+# Skill Contribution
+
+`skill-contribution` is the public upstream loop for portable `SKILL.md`
+files. It is separate from `skill-learning`.
+
+`skill-learning` decides what should be learned and produces a candidate
+artifact. `skill-contribution` takes a candidate and opens a maintainer-facing
+PR to the repo that benefits from the file.
+
+## Boundary
+
+What goes upstream:
+
+- `SKILL.md`
+- plain markdown instructions
+- repo-specific workflows, commands, validation expectations, and safety notes
+- a restrained optional compatibility note
+
+What stays in runx:
+
+- `x.yaml`
+- auth and scope policy
+- harnesses
+- receipts
+- registry trust tier
+- install and run commands
+
+The upstream PR should never require runx. The file must be useful as project
+documentation and as portable agent context.
+
+## Execution Contract
+
+The lane writes these artifacts under `.artifacts/skill-contribution/`:
+
+- `skill_opportunity.json`
+- `skill_research_report.json`
+- `skill_candidate.json`
+- `contribution_packet.json`
+- `public_feed_event.json`
+- `pr-body.md`
+
+The shared schema is `schemas/skill-contribution-artifacts.schema.json`.
+
+## Workflow
+
+The hosted workflow is `.github/workflows/skill-contribution.yml`.
+
+Manual dispatch inputs:
+
+- `target_repo`: external repo to inspect, default `nilstate/icey-cli`
+- `target_ref`: target branch or ref, default `main`
+- `workflow`: opportunity name, default `operator-bringup`
+- `mode`: `requested` or `auto`
+- `publish`: whether to open or update a draft PR
+- `force`: whether to overwrite an existing `SKILL.md` in the checkout
+
+The workflow checks out `automaton`, checks out the target repo, prepares the
+portable skill contribution, validates the public-language and artifact gates,
+and optionally publishes a draft PR.
+
+## Dogfood Target
+
+The first target is `nilstate/icey-cli` because it has a concrete operator
+surface:
+
+- C++ server build
+- bundled web UI build
+- browser smoke path
+- Docker demo
+- release artifacts
+- package-manager publication
+- pinned `nilstate/icey` dependency through `ICEY_VERSION`
+
+That makes it a strong first proof for a portable upstream `SKILL.md`: the
+file can describe real workflows without needing runx-specific execution
+metadata.
+
+## Public Language Rules
+
+Use contribution language:
+
+- portable skill
+- upstream skill
+- compatible tooling
+- verification
+- provenance
+
+Do not use strategy language in public PRs or generated files:
+
+- adoption
+- wedge
+- funnel
+- conversion
+- target account
+- growth loop
+- trojan horse
+
+## Local Dogfood
+
+From the `automaton` repo:
+
+```bash
+node scripts/prepare-skill-contribution.mjs \
+  --target-repo-dir /home/kam/dev/icey-cli \
+  --target-repo nilstate/icey-cli \
+  --output-dir .artifacts/skill-contribution/icey-cli \
+  --workflow operator-bringup \
+  --mode requested
+
+node scripts/validate-skill-contribution.mjs \
+  --target-repo-dir /home/kam/dev/icey-cli \
+  --artifacts-dir .artifacts/skill-contribution/icey-cli
+```
+
+Publish only after reviewing the generated `SKILL.md` and PR body:
+
+```bash
+(
+  cd /home/kam/dev/icey-cli
+  node /home/kam/dev/automaton/scripts/publish-runx-pr.mjs \
+    --repo nilstate/icey-cli \
+    --branch runx/add-skill-md \
+    --title "Add portable SKILL.md" \
+    --commit-message "docs: add portable SKILL.md" \
+    --body-file /home/kam/dev/automaton/.artifacts/skill-contribution/icey-cli/pr-body.md
+)
+```

@@ -48,7 +48,9 @@ The dogfood story should grow in layers:
 3. turn bounded work into PRs
 4. review PRs with useful operator feedback
 5. propose new skills when repeated work patterns appear
-6. gradually improve the repo and the governing system together
+6. contribute portable `SKILL.md` files to upstream repos that benefit from
+   the learned workflow
+7. gradually improve the repo and the governing system together
 
 That last point matters most. `automaton` is not only a destination for `runx`
 workflows. It is the public record of how those workflows become trustworthy.

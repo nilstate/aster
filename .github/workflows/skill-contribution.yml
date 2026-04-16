@@ -1,0 +1,137 @@
+name: skill-contribution
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_repo:
+        description: "External repo to receive portable SKILL.md"
+        required: true
+        default: "nilstate/icey-cli"
+        type: string
+      target_ref:
+        description: "Target repo ref to inspect"
+        required: true
+        default: "main"
+        type: string
+      workflow:
+        description: "Workflow opportunity name"
+        required: true
+        default: "operator-bringup"
+        type: string
+      mode:
+        description: "Learning intake mode"
+        required: true
+        default: "requested"
+        type: choice
+        options:
+          - requested
+          - auto
+      publish:
+        description: "Open/update a draft PR in the target repo"
+        required: true
+        default: false
+        type: boolean
+      force:
+        description: "Overwrite an existing SKILL.md in the target checkout"
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  actions: write
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: skill-contribution-${{ inputs.target_repo }}
+  cancel-in-progress: false
+
+jobs:
+  skill-contribution:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.UPSTREAM_CONTRIBUTION_TOKEN || secrets.RUNX_WORKSPACE_PAT || github.token }}
+      TARGET_REPO: ${{ inputs.target_repo }}
+      TARGET_REF: ${{ inputs.target_ref }}
+      CONTRIBUTION_WORKFLOW: ${{ inputs.workflow }}
+      CONTRIBUTION_MODE: ${{ inputs.mode }}
+      SHOULD_PUBLISH: ${{ inputs.publish }}
+      FORCE_WRITE: ${{ inputs.force }}
+    steps:
+      - name: Check out automaton
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Check out target repo
+        uses: actions/checkout@v6
+        with:
+          repository: ${{ inputs.target_repo }}
+          ref: ${{ inputs.target_ref }}
+          token: ${{ secrets.UPSTREAM_CONTRIBUTION_TOKEN || secrets.RUNX_WORKSPACE_PAT || github.token }}
+          path: .target/repo
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+
+      - name: Configure target git author
+        run: |
+          git -C .target/repo config user.name "github-actions[bot]"
+          git -C .target/repo config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Prepare portable skill contribution
+        run: |
+          set -euo pipefail
+          mkdir -p .artifacts
+          args=(
+            --target-repo-dir .target/repo
+            --target-repo "$TARGET_REPO"
+            --output-dir .artifacts/skill-contribution
+            --workflow "$CONTRIBUTION_WORKFLOW"
+            --mode "$CONTRIBUTION_MODE"
+            --branch "runx/add-skill-md"
+          )
+          if [ "$FORCE_WRITE" = "true" ]; then
+            args+=(--force)
+          fi
+          node scripts/prepare-skill-contribution.mjs "${args[@]}" \
+            > .artifacts/skill-contribution.prepare.json
+          cat .artifacts/skill-contribution.prepare.json
+
+      - name: Validate portable skill contribution
+        run: |
+          node scripts/validate-skill-contribution.mjs \
+            --target-repo-dir .target/repo \
+            --artifacts-dir .artifacts/skill-contribution \
+            > .artifacts/skill-contribution.validate.json
+          cat .artifacts/skill-contribution.validate.json
+
+      - name: Publish draft PR
+        if: ${{ inputs.publish }}
+        run: |
+          set -euo pipefail
+          cd .target/repo
+          node "$GITHUB_WORKSPACE/scripts/publish-runx-pr.mjs" \
+            --repo "$TARGET_REPO" \
+            --branch "runx/add-skill-md" \
+            --title "Add portable SKILL.md" \
+            --commit-message "docs: add portable SKILL.md" \
+            --body-file "$GITHUB_WORKSPACE/.artifacts/skill-contribution/pr-body.md" \
+            > "$GITHUB_WORKSPACE/.artifacts/skill-contribution/publish.json"
+          cat "$GITHUB_WORKSPACE/.artifacts/skill-contribution/publish.json"
+
+      - name: Upload artifacts
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: skill-contribution-${{ inputs.target_repo }}-${{ github.run_id }}
+          path: |
+            .artifacts/skill-contribution
+            .artifacts/skill-contribution.prepare.json
+            .artifacts/skill-contribution.validate.json

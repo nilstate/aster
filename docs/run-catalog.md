@@ -43,6 +43,17 @@ This is the live run catalog for `automaton`.
   proposal, materialize it under `docs/skill-proposals/`, and open a draft PR
 - output: proposal markdown, raw packet JSON, receipts, draft PR
 
+### `skill-contribution`
+
+- trigger: manual workflow dispatch
+- command: `node scripts/prepare-skill-contribution.mjs` followed by
+  `node scripts/validate-skill-contribution.mjs`
+- purpose: add a portable upstream `SKILL.md` to a target repo without adding
+  runx-specific binding files
+- first target: `nilstate/icey-cli`
+- output: target `SKILL.md`, contribution artifact packet, PR body, optional
+  draft PR, public evidence row
+
 ## Continuous Support Lanes
 
 ### `docs-pages`

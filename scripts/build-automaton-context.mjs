@@ -42,7 +42,7 @@ export async function buildContextBundle(options = {}) {
   });
   const reflections = await readMarkdownDirectory(path.join(repoRoot, "reflections"), {
     limit: Number(options.maxReflections ?? 4),
-    includeContent: false,
+    includeContent: true,
     repoRoot,
   });
   const priorities = await readMarkdownDocument(path.join(repoRoot, "state", "priorities.md"), repoRoot);
@@ -74,7 +74,13 @@ export async function buildContextBundle(options = {}) {
       target,
     },
     history,
-    reflections,
+    reflections: reflections.map((entry) => ({
+      ...entry,
+      is_relevant: isRelevantContextDoc(entry, {
+        locator: options.subjectLocator ?? targetRepo,
+        target_repo: targetRepo,
+      }),
+    })),
     artifact_signals: artifactSignals,
     snapshot,
   };
@@ -109,9 +115,9 @@ export function renderContextPrompt(bundle) {
 
   if (bundle.doctrine.length > 0) {
     lines.push("", "## Doctrine");
-    for (const doc of bundle.doctrine) {
+    for (const doc of sortDoctrineDocs(bundle.doctrine)) {
       lines.push("", `### ${doc.title}`);
-      lines.push("", trimForPrompt(doc.content ?? doc.excerpt, 2200));
+      lines.push("", trimDoctrineForPrompt(doc));
     }
   }
 
@@ -139,6 +145,11 @@ export function renderContextPrompt(bundle) {
   if (bundle.reflections.length > 0) {
     lines.push("", "## Recent Reflections");
     for (const entry of bundle.reflections) {
+      if (entry.is_relevant && entry.content) {
+        lines.push("", `### ${entry.title}`);
+        lines.push("", trimForPrompt(entry.content, 1600));
+        continue;
+      }
       lines.push(`- ${entry.title}: ${trimInline(entry.excerpt, 240)}`);
     }
   }
@@ -410,6 +421,100 @@ export function slugifyRepoLike(value) {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
+}
+
+function isRelevantContextDoc(entry, subject) {
+  return firstString(entry?.frontmatter?.subject_locator) === firstString(subject.locator)
+    || firstString(entry?.frontmatter?.target_repo) === firstString(subject.target_repo);
+}
+
+function sortDoctrineDocs(docs) {
+  const priority = {
+    "doctrine/AUTOMATON.md": 0,
+    "doctrine/GUARDRAILS.md": 1,
+    "doctrine/SCORING.md": 2,
+    "doctrine/LANES.md": 3,
+  };
+  return [...docs].sort((left, right) => {
+    return (priority[left.path] ?? 100) - (priority[right.path] ?? 100);
+  });
+}
+
+function trimDoctrineForPrompt(doc) {
+  const preferences = {
+    "doctrine/AUTOMATON.md": ["Automaton Thesis"],
+    "doctrine/GUARDRAILS.md": ["Safety", "Conduct", "Evidence", "Evolution"],
+    "doctrine/SCORING.md": [
+      "Weighted Thesis Score",
+      "Vetoes",
+      "Selection Threshold",
+      "Cooldowns",
+      "Selection Loop",
+    ],
+    "doctrine/LANES.md": ["Active Lanes", "Transitional Lanes"],
+  };
+  return trimSectionAware(doc.content ?? doc.excerpt, 2200, preferences[doc.path] ?? []);
+}
+
+function trimSectionAware(content, limit, preferredHeadings = []) {
+  const normalized = String(content ?? "").trim();
+  if (normalized.length <= limit) {
+    return normalized;
+  }
+
+  const lines = normalized.split("\n");
+  const intro = [];
+  const sections = [];
+  let current = null;
+
+  for (const line of lines) {
+    if (line.startsWith("## ")) {
+      current = {
+        heading: line.slice(3).trim(),
+        lines: [line],
+      };
+      sections.push(current);
+      continue;
+    }
+    if (!current) {
+      intro.push(line);
+      continue;
+    }
+    current.lines.push(line);
+  }
+
+  const chosen = [];
+  if (intro.length > 0) {
+    chosen.push(intro.join("\n").trim());
+  }
+
+  for (const preferred of preferredHeadings) {
+    const match = sections.find((section) => section.heading === preferred);
+    if (!match) {
+      continue;
+    }
+    const block = match.lines.join("\n").trim();
+    if (block && !chosen.includes(block)) {
+      chosen.push(block);
+    }
+  }
+
+  for (const section of sections) {
+    const block = section.lines.join("\n").trim();
+    if (!block || chosen.includes(block)) {
+      continue;
+    }
+    chosen.push(block);
+    if (chosen.join("\n\n").length >= limit) {
+      break;
+    }
+  }
+
+  const collapsed = chosen.join("\n\n").trim();
+  if (collapsed.length <= limit) {
+    return collapsed;
+  }
+  return `${collapsed.slice(0, limit - 3)}...`;
 }
 
 function trimInline(value, limit) {

@@ -480,6 +480,37 @@ Every meaningful run should assemble context in the same order:
 That ordering matters. It keeps `automaton` grounded in evidence before it
 updates its own beliefs.
 
+The implemented context path now lives in:
+
+- `scripts/build-automaton-context.mjs`
+- `scripts/automaton-core.mjs`
+- `scripts/promote-automaton-state.mjs`
+- `scripts/apply-automaton-promotions.mjs`
+
+Doctrine is loaded in a stable priority order. Relevant reflections now load as
+full content when the subject matches; unrelated reflections stay excerpt-only.
+`doctrine/SCORING.md` is the authoritative scoring contract for selection.
+
+## Selection Loop
+
+The selector is now a real operator component, not just a plan:
+
+- `scripts/automaton-cycle.mjs` discovers candidates, scores them, and selects
+  one bounded lane or `no_op`
+- `.github/workflows/automaton-cycle.yml` runs the assess/discover/score/select
+  cycle on GitHub
+- target dossiers in `state/targets/` provide default-lane posture and recent
+  outcomes used for cooldowns
+
+The current discovery surface is:
+
+- open GitHub issues
+- open GitHub pull requests
+- bounded maintenance opportunities such as `sourcey-refresh`
+- bounded maintenance opportunities such as `runx-dogfood`
+
+The current scoring authority is `doctrine/SCORING.md`, not older plan text.
+
 ## Self-Improvement Direction
 
 `automaton` should improve in a fixed order:

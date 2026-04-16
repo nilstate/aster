@@ -109,6 +109,7 @@ export function extractRunSignal(runResult) {
 }
 
 function buildReflectionDraft({ date, lane, contextBundle, packet }) {
+  const subject = contextBundle?.subject ?? {};
   const lines = [
     "---",
     `title: ${humanizeTitle(lane)} — ${packet.summary}`,
@@ -120,6 +121,21 @@ function buildReflectionDraft({ date, lane, contextBundle, packet }) {
 
   if (packet.receipt_id) {
     lines.push(`receipt_id: ${packet.receipt_id}`);
+  }
+  if (subject.kind) {
+    lines.push(`subject_kind: ${subject.kind}`);
+  }
+  if (subject.locator) {
+    lines.push(`subject_locator: ${subject.locator}`);
+  }
+  if (subject.target_repo) {
+    lines.push(`target_repo: ${subject.target_repo}`);
+  }
+  if (subject.issue_number) {
+    lines.push(`issue_number: ${subject.issue_number}`);
+  }
+  if (subject.pr_number) {
+    lines.push(`pr_number: ${subject.pr_number}`);
   }
   lines.push("---", "", `# ${humanizeTitle(lane)} — ${packet.summary}`, "");
   lines.push("## What Happened", "");
@@ -149,6 +165,7 @@ function buildReflectionDraft({ date, lane, contextBundle, packet }) {
 }
 
 function buildHistoryDraft({ date, lane, contextBundle, packet }) {
+  const subject = contextBundle?.subject ?? {};
   const title = `${humanizeTitle(lane)} — ${packet.summary}`;
   const lines = [
     "---",
@@ -156,6 +173,23 @@ function buildHistoryDraft({ date, lane, contextBundle, packet }) {
     `date: ${date}`,
     "visibility: public",
     `lane: ${lane}`,
+  ];
+  if (subject.kind) {
+    lines.push(`subject_kind: ${subject.kind}`);
+  }
+  if (subject.locator) {
+    lines.push(`subject_locator: ${subject.locator}`);
+  }
+  if (subject.target_repo) {
+    lines.push(`target_repo: ${subject.target_repo}`);
+  }
+  if (subject.issue_number) {
+    lines.push(`issue_number: ${subject.issue_number}`);
+  }
+  if (subject.pr_number) {
+    lines.push(`pr_number: ${subject.pr_number}`);
+  }
+  lines.push(
     "---",
     "",
     `# ${title}`,
@@ -163,7 +197,7 @@ function buildHistoryDraft({ date, lane, contextBundle, packet }) {
     `A \`${lane}\` run against \`${contextBundle?.subject?.locator ?? "unknown"}\` finished with \`${packet.status}\`.`,
     "",
     `Summary: ${packet.summary}`,
-  ];
+  );
   if (packet.receipt_id) {
     lines.push("", `Receipt reference: \`${packet.receipt_id}\`.`);
   }

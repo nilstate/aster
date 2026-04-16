@@ -16,6 +16,10 @@ on:
         description: Pull request number to triage explicitly.
         required: true
         type: string
+      target_repo:
+        description: Repo containing the PR. Defaults to this repo.
+        required: false
+        type: string
 
 permissions:
   contents: write
@@ -23,7 +27,7 @@ permissions:
   issues: write
 
 concurrency:
-  group: pr-triage-${{ github.event.pull_request.number || github.event.inputs.pr_number || github.ref_name }}
+  group: pr-triage-${{ github.event.inputs.target_repo || github.repository }}-${{ github.event.pull_request.number || github.event.inputs.pr_number || github.ref_name }}
   cancel-in-progress: true
 
 jobs:
@@ -31,7 +35,7 @@ jobs:
     if: ${{ github.event_name == 'workflow_dispatch' || !startsWith(github.event.pull_request.head.ref, 'runx/operator-memory-') }}
     runs-on: ubuntu-latest
     env:
-      GH_TOKEN: ${{ github.token }}
+      GH_TOKEN: ${{ secrets.AUTOMATON_GH_TOKEN != '' && secrets.AUTOMATON_GH_TOKEN || github.token }}
       RUNX_CALLER_MODEL: ${{ vars.RUNX_CALLER_MODEL || 'gpt-5.4' }}
       RUNX_CALLER_REASONING_EFFORT: ${{ vars.RUNX_CALLER_REASONING_EFFORT || 'xhigh' }}
       RUNX_CALLER_MAX_ATTEMPTS: ${{ vars.RUNX_CALLER_MAX_ATTEMPTS || '3' }}
@@ -86,9 +90,10 @@ jobs:
       - name: Build PR snapshot
         if: ${{ steps.preflight.outputs.enabled == 'true' }}
         run: |
+          TARGET_REPO="${{ github.event.inputs.target_repo || github.repository }}"
           mkdir -p .artifacts/pr-triage
           node scripts/build-pr-snapshot.mjs \
-            --repo "${{ github.repository }}" \
+            --repo "$TARGET_REPO" \
             --pr "${{ github.event.inputs.pr_number || github.event.pull_request.number }}" \
             > .artifacts/pr-triage/pr-snapshot.json
 
@@ -97,14 +102,16 @@ jobs:
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: |
+          TARGET_REPO="${{ github.event.inputs.target_repo || github.repository }}"
+          TARGET_SLUG="$(printf '%s' "$TARGET_REPO" | tr '[:upper:]/' '[:lower:]-')"
           node scripts/automaton-core.mjs \
             --lane pr-triage \
             --runx-root "$GITHUB_WORKSPACE/.runx/runx" \
             --artifact-root "$GITHUB_WORKSPACE/.artifacts/pr-triage" \
             --subject-kind github_pull_request \
-            --subject-locator "${{ github.repository }}#pr/${{ github.event.inputs.pr_number || github.event.pull_request.number }}" \
+            --subject-locator "$TARGET_REPO#pr/${{ github.event.inputs.pr_number || github.event.pull_request.number }}" \
             --repo "${{ github.repository }}" \
-            --target-repo "${{ github.repository }}" \
+            --target-repo "$TARGET_REPO" \
             --pr-number "${{ github.event.inputs.pr_number || github.event.pull_request.number }}" \
             --snapshot "$GITHUB_WORKSPACE/.artifacts/pr-triage/pr-snapshot.json" \
             --receipt-dir "$GITHUB_WORKSPACE/.artifacts/pr-triage/receipts" \
@@ -131,7 +138,7 @@ jobs:
           EOF
           node scripts/publish-runx-pr.mjs \
             --repo "${{ github.repository }}" \
-            --branch "runx/operator-memory-pr-triage-pr-${{ github.event.inputs.pr_number || github.event.pull_request.number }}" \
+            --branch "runx/operator-memory-pr-triage-$TARGET_SLUG-pr-${{ github.event.inputs.pr_number || github.event.pull_request.number }}" \
             --title "[runx] update pr-triage operator memory" \
             --commit-message "docs(memory): update pr-triage operator memory" \
             --body-file "$GITHUB_WORKSPACE/.artifacts/pr-triage/operator-memory-pr-body.md" \
@@ -148,8 +155,9 @@ jobs:
       - name: Post PR comment
         if: ${{ steps.preflight.outputs.enabled == 'true' }}
         run: |
+          TARGET_REPO="${{ github.event.inputs.target_repo || github.repository }}"
           node scripts/post-pr-triage-comment.mjs \
-            --repo "${{ github.repository }}" \
+            --repo "$TARGET_REPO" \
             --pr "$(jq -r '.pr_number' .artifacts/pr-triage/pr-snapshot.json)" \
             --body-file ".artifacts/pr-triage/comment.md" \
             --sha "$(jq -r '.head_sha' .artifacts/pr-triage/pr-snapshot.json)"

@@ -156,7 +156,7 @@ test("normalizeWorkerRequest rejects schema-invalid extra properties", () => {
       defaultRepo: "nilstate/maton",
       catalog,
     });
-  }, /worker-request\.schema\.json/);
+  }, /urn:maton:schema:worker-request:v1/);
 });
 
 test("normalizeWorkspaceChangePlanRequest preserves structured target surfaces", () => {

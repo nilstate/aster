@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://runx.ai/spec/worker-request.schema.json",
+  "$id": "urn:maton:schema:worker-request:v1",
   "title": "runx Worker Request",
   "description": "Canonical prerelease v1 discriminated union for governed worker packets.",
   "oneOf": [
@@ -50,8 +50,7 @@
             "string",
             "null"
           ],
-          "minLength": 1,
-          "pattern": "^runx\\/[A-Za-z0-9._/-]+$"
+          "minLength": 1
         },
         "size": {
           "type": "string",

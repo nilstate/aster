@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://runx.ai/spec/issue-to-pr-request.schema.json",
+  "$id": "urn:maton:schema:issue-to-pr-request:v1",
   "title": "runx Issue To PR Request",
   "description": "Canonical prerelease v1 schema for bounded issue-to-pr worker requests.",
   "type": "object",
@@ -43,8 +43,7 @@
         "string",
         "null"
       ],
-      "minLength": 1,
-      "pattern": "^runx\\/[A-Za-z0-9._/-]+$"
+      "minLength": 1
     },
     "size": {
       "type": "string",

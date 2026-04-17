@@ -107,6 +107,7 @@ const required = [
   "scripts/publish-runx-pr.test.mjs",
   "scripts/rollback-run.mjs",
   "scripts/rollback-run.test.mjs",
+  "scripts/check-site-shared-surface.mjs",
   ".github/workflows/generated-pr-policy.yml",
   ".github/workflows/ci.yml",
   ".github/workflows/docs-pr.yml",
@@ -132,5 +133,7 @@ for (const relativePath of required) {
 
 const { loadVerificationProfileCatalogSync } = await import("./maton-v1-contracts.mjs");
 loadVerificationProfileCatalogSync();
+const { assertMatonSiteSharedSurface } = await import("./check-site-shared-surface.mjs");
+await assertMatonSiteSharedSurface();
 
 console.log("maton check passed");

@@ -99,7 +99,7 @@ jobs:
               "kind": "maton_run",
               "source": "github-actions",
               "status": feed.get("status") or "success",
-              "title": f"merge-watch · {metadata.get('target_repo') or os.environ.get('TARGET_REPO')}",
+              "title": f"watched upstream merge on {metadata.get('target_repo') or os.environ.get('TARGET_REPO')}",
               "timestamp": feed.get("timestamp") or datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
               "summary": feed.get("summary"),
               "repo": os.environ.get("GITHUB_REPOSITORY"),

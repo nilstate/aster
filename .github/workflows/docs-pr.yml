@@ -126,6 +126,31 @@ jobs:
           node scripts/run-governed-pr-lane.mjs "${args[@]}" > .artifacts/docs-pr/result-summary.json
           cat .artifacts/docs-pr/result-summary.json
 
+      - name: Publish evidence
+        if: ${{ always() && steps.preflight.outputs.enabled == 'true' }}
+        env:
+          RUNX_PUBLIC_EVIDENCE_API_BASE_URL: ${{ vars.RUNX_PUBLIC_EVIDENCE_API_BASE_URL || 'https://api.runx.ai' }}
+          RUNX_PUBLIC_EVIDENCE_TOKEN: ${{ secrets.RUNX_PUBLIC_EVIDENCE_TOKEN }}
+        run: |
+          STATUS="${{ job.status }}"
+          TARGET="${{ inputs.target_repo || github.repository }}"
+          if [ "$STATUS" = "success" ]; then
+            TITLE="opened a docs PR on ${TARGET}"
+            SUMMARY="drafted a bounded docs improvement and opened a review-ready PR"
+          else
+            TITLE="docs PR failed on ${TARGET}"
+            SUMMARY="docs-pr lane failed during execution"
+          fi
+          curl --fail --silent --show-error \
+            -X POST \
+            -H "authorization: Bearer ${RUNX_PUBLIC_EVIDENCE_TOKEN}" \
+            -H "content-type: application/json" \
+            --data "$(jq -n \
+              --arg title "$TITLE" --arg summary "$SUMMARY" --arg status "$STATUS" \
+              --arg repo "$TARGET" --arg url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+              '{events: [{kind: "maton_run", source: "github-actions", status: (if $status == "success" then "success" else "failure" end), title: $title, summary: $summary, repo: $repo, workflow: "docs-pr", url: $url, timestamp: (now | todate), metadata: {lane: "docs-pr", feed_channel: "main", main_feed_eligible: true}}]}')" \
+            "${RUNX_PUBLIC_EVIDENCE_API_BASE_URL%/}/v1/admin/public/evidence" || true
+
       - name: Upload artifacts
         if: ${{ always() && steps.preflight.outputs.enabled == 'true' }}
         uses: actions/upload-artifact@v7

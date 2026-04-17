@@ -126,6 +126,31 @@ jobs:
           node scripts/run-governed-pr-lane.mjs "${args[@]}" > .artifacts/fix-pr/result-summary.json
           cat .artifacts/fix-pr/result-summary.json
 
+      - name: Publish evidence
+        if: ${{ always() && steps.preflight.outputs.enabled == 'true' }}
+        env:
+          RUNX_PUBLIC_EVIDENCE_API_BASE_URL: ${{ vars.RUNX_PUBLIC_EVIDENCE_API_BASE_URL || 'https://api.runx.ai' }}
+          RUNX_PUBLIC_EVIDENCE_TOKEN: ${{ secrets.RUNX_PUBLIC_EVIDENCE_TOKEN }}
+        run: |
+          STATUS="${{ job.status }}"
+          TARGET="${{ inputs.target_repo || github.repository }}"
+          if [ "$STATUS" = "success" ]; then
+            TITLE="opened a fix PR on ${TARGET}"
+            SUMMARY="diagnosed a bounded bug and opened a review-ready fix PR"
+          else
+            TITLE="fix PR failed on ${TARGET}"
+            SUMMARY="fix-pr lane failed during execution"
+          fi
+          curl --fail --silent --show-error \
+            -X POST \
+            -H "authorization: Bearer ${RUNX_PUBLIC_EVIDENCE_TOKEN}" \
+            -H "content-type: application/json" \
+            --data "$(jq -n \
+              --arg title "$TITLE" --arg summary "$SUMMARY" --arg status "$STATUS" \
+              --arg repo "$TARGET" --arg url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+              '{events: [{kind: "maton_run", source: "github-actions", status: (if $status == "success" then "success" else "failure" end), title: $title, summary: $summary, repo: $repo, workflow: "fix-pr", url: $url, timestamp: (now | todate), metadata: {lane: "fix-pr", feed_channel: "main", main_feed_eligible: true}}]}')" \
+            "${RUNX_PUBLIC_EVIDENCE_API_BASE_URL%/}/v1/admin/public/evidence" || true
+
       - name: Upload artifacts
         if: ${{ always() && steps.preflight.outputs.enabled == 'true' }}
         uses: actions/upload-artifact@v7

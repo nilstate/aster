@@ -6,13 +6,6 @@ on:
       - ci
       - maton-cycle
       - site-pages
-      - docs-pr
-      - fix-pr
-      - issue-triage
-      - proving-ground
-      - skill-upstream
-      - merge-watch
-      - skill-lab
       - generated-pr-policy
       - rollback
     types:
@@ -65,7 +58,7 @@ jobs:
           RUNX_PUBLIC_EVIDENCE_TOKEN: ${{ secrets.RUNX_PUBLIC_EVIDENCE_TOKEN }}
           RUNX_PUBLIC_EVIDENCE_KIND: maton_run
           RUNX_PUBLIC_EVIDENCE_STATUS: ${{ github.event_name == 'workflow_dispatch' && inputs.status || (github.event.workflow_run.conclusion == 'timed_out' && 'failure') || github.event.workflow_run.conclusion }}
-          RUNX_PUBLIC_EVIDENCE_TITLE: ${{ github.event_name == 'workflow_dispatch' && format('{0} · {1}', inputs.workflow_name, github.repository) || format('{0} · {1}', github.event.workflow_run.name, github.repository) }}
+          RUNX_PUBLIC_EVIDENCE_TITLE: ${{ github.event_name == 'workflow_dispatch' && inputs.workflow_name || '' }}
           RUNX_PUBLIC_EVIDENCE_SUMMARY: ${{ github.event_name == 'workflow_dispatch' && inputs.summary || '' }}
           RUNX_PUBLIC_EVIDENCE_REPO: ${{ github.repository }}
           RUNX_PUBLIC_EVIDENCE_WORKFLOW: ${{ github.event_name == 'workflow_dispatch' && inputs.workflow_name || github.event.workflow_run.name }}
@@ -212,7 +205,7 @@ jobs:
               "kind": trim(os.environ.get("RUNX_PUBLIC_EVIDENCE_KIND")) or "maton_run",
               "source": trim(os.environ.get("RUNX_PUBLIC_EVIDENCE_SOURCE")) or "github-actions",
               "status": status,
-              "title": trim(os.environ.get("RUNX_PUBLIC_EVIDENCE_TITLE")) or "maton public event",
+              "title": trim(os.environ.get("RUNX_PUBLIC_EVIDENCE_TITLE")) or workflow or "maton event",
               "timestamp": trim(os.environ.get("RUNX_PUBLIC_EVIDENCE_TIMESTAMP")) or datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
               "summary": trim(os.environ.get("RUNX_PUBLIC_EVIDENCE_SUMMARY")) or summary_for(workflow, status, metadata),
               "repo": trim(os.environ.get("RUNX_PUBLIC_EVIDENCE_REPO")) or trim(os.environ.get("GITHUB_REPOSITORY")),

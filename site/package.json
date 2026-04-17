@@ -7,7 +7,7 @@
     "dev": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
-    "check": "astro check"
+    "check": "node ../scripts/check-site-shared-surface.mjs && astro check"
   },
   "dependencies": {
     "astro": "^5.7.5",

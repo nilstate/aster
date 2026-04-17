@@ -310,6 +310,52 @@ jobs:
             --fingerprint "$(jq -r '.fingerprint // empty' .artifacts/issue-triage/issue/replay-guard.json)" \
             --body-file ".artifacts/issue-triage/issue/triage-comment.md"
 
+      - name: Publish evidence
+        if: ${{ always() && steps.preflight.outputs.enabled == 'true' && steps.target_scope.outputs.allowed == 'true' && steps.issue_replay_guard.outputs.status == 'run' }}
+        env:
+          RUNX_PUBLIC_EVIDENCE_API_BASE_URL: ${{ vars.RUNX_PUBLIC_EVIDENCE_API_BASE_URL || 'https://api.runx.ai' }}
+          RUNX_PUBLIC_EVIDENCE_TOKEN: ${{ secrets.RUNX_PUBLIC_EVIDENCE_TOKEN }}
+        run: |
+          STATUS="${{ job.status }}"
+          ISSUE_NUM="${{ steps.issue.outputs.number }}"
+          ISSUE_TITLE="${{ steps.issue.outputs.title }}"
+          TARGET="${{ steps.issue.outputs.target_repo }}"
+          if [ "$STATUS" = "success" ]; then
+            TITLE="triaged issue #${ISSUE_NUM} on ${TARGET}"
+            SUMMARY="reviewed '${ISSUE_TITLE}' and posted a triage comment with routing decision"
+          else
+            TITLE="failed to triage issue #${ISSUE_NUM} on ${TARGET}"
+            SUMMARY="issue-triage lane failed for '${ISSUE_TITLE}'"
+          fi
+          curl --fail --silent --show-error \
+            -X POST \
+            -H "authorization: Bearer ${RUNX_PUBLIC_EVIDENCE_TOKEN}" \
+            -H "content-type: application/json" \
+            --data "$(jq -n \
+              --arg title "$TITLE" \
+              --arg summary "$SUMMARY" \
+              --arg status "$STATUS" \
+              --arg repo "$TARGET" \
+              --arg workflow "issue-triage" \
+              --arg branch "${{ github.ref_name }}" \
+              --arg commit "${{ github.sha }}" \
+              --arg url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+              '{events: [{
+                kind: "maton_run",
+                source: "github-actions",
+                status: (if $status == "success" then "success" else "failure" end),
+                title: $title,
+                summary: $summary,
+                repo: $repo,
+                workflow: $workflow,
+                branch: $branch,
+                commit: $commit,
+                url: $url,
+                timestamp: (now | todate),
+                metadata: {lane: "issue-triage", feed_channel: "main", main_feed_eligible: true}
+              }]}')" \
+            "${RUNX_PUBLIC_EVIDENCE_API_BASE_URL%/}/v1/admin/public/evidence" || true
+
       - name: Upload issue artifacts
         if: ${{ always() && steps.preflight.outputs.enabled == 'true' && steps.target_scope.outputs.allowed == 'true' }}
         uses: actions/upload-artifact@v7

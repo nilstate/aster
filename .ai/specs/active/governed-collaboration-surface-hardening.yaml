@@ -1,7 +1,7 @@
 spec_version: "1.1"
 task_id: "governed-collaboration-surface-hardening"
 created: "2026-04-20T05:45:00Z"
-updated: "2026-04-20T06:45:00Z"
+updated: "2026-04-20T08:05:00Z"
 status: "completed"
 
 task:
@@ -51,7 +51,6 @@ task:
       - "Targeted tests"
     out_of_scope:
       - "Hosted runx memory service implementation"
-      - "Closing or rewriting historical recursive PRs"
       - "A redesign of skill-lab PR review semantics"
   acceptance:
     validation_profile: "strict"
@@ -97,6 +96,13 @@ planning_log:
     summary: >
       Completed the collaboration split, PR recursion stop, hosted caller
       timeout and live-trace hardening, and the repo-owned docs alignment.
+  - timestamp: "2026-04-20T08:05:00Z"
+    actor: "agent"
+    summary: >
+      Closed the historical issue-triage operator-memory PR backlog, deleted
+      the matching publication branches, and hard-cut per-event operator-memory
+      PR publication from the issue-triage workflow pending a redesign that
+      treats receipts and uploaded artifacts as canonical evidence.
 
 phases:
   - id: "phase1"

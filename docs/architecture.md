@@ -299,7 +299,8 @@ Add:
 - `history/` entries
 - `reflections/` entries
 - `state/targets/`
-- generated summaries checked into the repo when they are worth reviewing
+- generated summaries checked into the repo only when they are worth reviewing
+  as compact, intentionally batched changes rather than one PR per live event
 
 This is still small, legible, and rebuildable.
 
@@ -562,8 +563,6 @@ The selector is now a real operator component, not just a plan:
   cycle on GitHub
 - target dossiers in `state/targets/` provide default-lane posture and recent
   outcomes used for cooldowns
-- open operator-memory PRs for the same subject act as a hard selector veto, so
-  repeated work stops before the promotion branch is merged
 - curated target dossiers, not repo-name prefixes, are now the real external
   scope boundary for public comment/review lanes
 
@@ -674,8 +673,9 @@ For `aster` itself:
 
 That means:
 
-- `issue-triage` operator-memory PRs may touch learned-state and public-memory
-  surfaces
+- `issue-triage` should treat receipts, uploaded artifacts, and canonical
+  collaboration issues as the durable record; any future learned-state refresh
+  surface must be explicit, compact, and non-recursive
 - `docs-pr` may touch docs/public-face surfaces, but not doctrine or learned-state
 - `fix-pr` may touch runtime surfaces, but not doctrine or learned-state
 

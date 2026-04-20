@@ -272,23 +272,6 @@ jobs:
             --repo-root "$GITHUB_WORKSPACE" \
             --summary "$GITHUB_WORKSPACE/.artifacts/issue-triage/issue/core-summary.json" \
             --output "$GITHUB_WORKSPACE/.artifacts/issue-triage/issue/promotion-apply.json"
-          cat > "$GITHUB_WORKSPACE/.artifacts/issue-triage/issue/operator-memory-pr-body.md" <<'EOF'
-          ## Summary
-
-          This draft PR updates operator memory from the `issue-triage` lane.
-
-          - Appends the new reflection/history drafts into repo-owned surfaces
-          - Updates the target dossier recent-outcomes projection
-          - Receipts uploaded with this workflow run remain the canonical evidence
-          EOF
-          node scripts/publish-runx-pr.mjs \
-            --repo "${{ github.repository }}" \
-            --branch "runx/operator-memory-issue-triage-${{ steps.issue.outputs.target_slug }}-issue-${{ steps.issue.outputs.number }}" \
-            --title "[runx] update issue-triage operator memory" \
-            --commit-message "docs(memory): update issue-triage operator memory" \
-            --body-file "$GITHUB_WORKSPACE/.artifacts/issue-triage/issue/operator-memory-pr-body.md" \
-            --lane issue-triage \
-            > "$GITHUB_WORKSPACE/.artifacts/issue-triage/issue/operator-memory-publish.json"
           jq -r '.comment_body' "$GITHUB_WORKSPACE/.artifacts/issue-triage/issue/triage-decision.json" \
             > "$GITHUB_WORKSPACE/.artifacts/issue-triage/issue/triage-comment.md"
           if [ "$(jq -r '.triage_decision.should_start_planner' "$GITHUB_WORKSPACE/.artifacts/issue-triage/issue/triage-decision.json")" = "true" ]; then
@@ -321,14 +304,6 @@ jobs:
             --artifact-root "$GITHUB_WORKSPACE/.artifacts/issue-triage/issue/workers" \
             --work-root "$GITHUB_WORKSPACE/.artifacts/issue-triage/issue/workspaces" \
             --output "$GITHUB_WORKSPACE/.artifacts/issue-triage/issue/worker-run-summary.json"
-
-      - name: Evaluate operator-memory PR
-        if: ${{ steps.preflight.outputs.enabled == 'true' && steps.issue_mode.outputs.mode == 'triage' && steps.target_scope.outputs.allowed == 'true' && steps.issue_replay_guard.outputs.status == 'run' && hashFiles('.artifacts/issue-triage/issue/operator-memory-publish.json') != '' }}
-        run: |
-          node scripts/evaluate-generated-pr.mjs \
-            --publish ".artifacts/issue-triage/issue/operator-memory-publish.json" \
-            --body-file ".artifacts/issue-triage/issue/operator-memory-pr-body.md" \
-            --output ".artifacts/issue-triage/issue/operator-memory-pr-eval.json"
 
       - name: Evaluate issue comment quality
         if: ${{ steps.preflight.outputs.enabled == 'true' && steps.issue_mode.outputs.mode == 'triage' && steps.target_scope.outputs.allowed == 'true' && steps.issue_replay_guard.outputs.status == 'run' }}
@@ -642,23 +617,6 @@ jobs:
             --repo-root "$GITHUB_WORKSPACE" \
             --summary "$GITHUB_WORKSPACE/.artifacts/issue-triage/pr/core-summary.json" \
             --output "$GITHUB_WORKSPACE/.artifacts/issue-triage/pr/promotion-apply.json"
-          cat > "$GITHUB_WORKSPACE/.artifacts/issue-triage/pr/operator-memory-pr-body.md" <<'EOF'
-          ## Summary
-
-          This draft PR updates operator memory from the `issue-triage` lane.
-
-          - Appends the new reflection/history drafts into repo-owned surfaces
-          - Updates the target dossier recent-outcomes projection
-          - Receipts uploaded with this workflow run remain the canonical evidence
-          EOF
-          node scripts/publish-runx-pr.mjs \
-            --repo "${{ github.repository }}" \
-            --branch "runx/operator-memory-issue-triage-$TARGET_SLUG-pr-${{ github.event.inputs.pr_number || github.event.pull_request.number }}" \
-            --title "[runx] update issue-triage operator memory" \
-            --commit-message "docs(memory): update issue-triage operator memory" \
-            --body-file "$GITHUB_WORKSPACE/.artifacts/issue-triage/pr/operator-memory-pr-body.md" \
-            --lane issue-triage \
-            > "$GITHUB_WORKSPACE/.artifacts/issue-triage/pr/operator-memory-publish.json"
 
       - name: Materialize PR comment
         if: ${{ steps.preflight.outputs.enabled == 'true' && steps.target_scope.outputs.allowed == 'true' && steps.pr_policy.outputs.allowed == 'true' && steps.pr_replay_guard.outputs.status == 'run' }}
@@ -666,14 +624,6 @@ jobs:
           node scripts/write-triage-comment.mjs \
             --input ".artifacts/issue-triage/pr/result.json" \
             --output ".artifacts/issue-triage/pr/comment.md"
-
-      - name: Evaluate operator-memory PR
-        if: ${{ steps.preflight.outputs.enabled == 'true' && steps.target_scope.outputs.allowed == 'true' && steps.pr_policy.outputs.allowed == 'true' && steps.pr_replay_guard.outputs.status == 'run' && hashFiles('.artifacts/issue-triage/pr/operator-memory-publish.json') != '' }}
-        run: |
-          node scripts/evaluate-generated-pr.mjs \
-            --publish ".artifacts/issue-triage/pr/operator-memory-publish.json" \
-            --body-file ".artifacts/issue-triage/pr/operator-memory-pr-body.md" \
-            --output ".artifacts/issue-triage/pr/operator-memory-pr-eval.json"
 
       - name: Evaluate PR comment quality
         if: ${{ steps.preflight.outputs.enabled == 'true' && steps.target_scope.outputs.allowed == 'true' && steps.pr_policy.outputs.allowed == 'true' && steps.pr_replay_guard.outputs.status == 'run' }}

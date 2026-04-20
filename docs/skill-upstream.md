@@ -57,11 +57,15 @@ Manual dispatch inputs:
 - `workflow`: opportunity name, default `operator-bringup`
 - `mode`: `requested` or `auto`
 - `publish`: whether to open or update a draft PR
+- `collaboration_repo`: repo that holds the approval and teaching issue
+- `collaboration_issue`: issue number containing publish authorization when
+  `publish=true`
 - `force`: whether to overwrite an existing `SKILL.md` in the checkout
 
 The workflow checks out `aster`, checks out the target repo, prepares the
 portable skill contribution, validates the public-language and artifact gates,
-and optionally publishes a draft PR.
+and optionally publishes a draft PR. Publication fails closed unless a trusted
+thread-teaching record authorizes `skill-upstream.publish` for the target repo.
 
 ## Watch Lane
 

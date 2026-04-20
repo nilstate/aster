@@ -35,6 +35,10 @@ export const RUNX_CONTROL_SCHEMA_ARTIFACTS = {
     ref: "urn:aster:schema:selector-training-row:v1",
     file: "spec/selector-training-row.schema.json",
   },
+  thread_teaching_row: {
+    ref: "urn:aster:schema:thread-teaching-row:v1",
+    file: "spec/thread-teaching-row.schema.json",
+  },
 };
 
 const schemaCache = new Map();

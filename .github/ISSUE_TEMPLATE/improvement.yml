@@ -19,4 +19,4 @@ body:
     id: safety
     attributes:
       label: Safety Notes
-      description: What should stay approval-gated or out of scope?
+      description: What should stay thread-teaching-gated or out of scope?

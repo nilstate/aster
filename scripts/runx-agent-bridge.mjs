@@ -6,7 +6,14 @@ import https from "node:https";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 
+import {
+  gateSelectorMatches,
+  normalizeThreadTeachingContext,
+  threadTeachingContextAllowsGate,
+} from "./thread-teaching.mjs";
+
 const execFileAsync = promisify(execFile);
+export { gateSelectorMatches } from "./thread-teaching.mjs";
 
 async function main() {
   const options = parseArgs(process.argv.slice(2));
@@ -25,8 +32,8 @@ async function main() {
     options.reasoningEffort ?? process.env.RUNX_CALLER_REASONING_EFFORT ?? "xhigh";
   const maxTurns = Number(options.maxTurns ?? process.env.RUNX_CALLER_MAX_TURNS ?? "8");
   const contextText = await loadCallerContext(options.contextFile);
-  const approvalContext = await loadApprovalContext(options.approvalContextPath);
-  const approvalRecords = [];
+  const threadTeachingContext = await loadThreadTeachingContext(options.threadTeachingContextPath);
+  const gateDecisionRecords = [];
 
   if (!existsSync(cliBin)) {
     throw new Error(`runx CLI build not found at ${cliBin}`);
@@ -75,14 +82,14 @@ async function main() {
           ? "approve_all"
           : setHasGateMatch(approvedGates, gateId)
             ? "explicit_gate_match"
-            : approvalContextAllowsGate(approvalContext, request.gate)
-              ? "approval_context"
+            : threadTeachingContextAllowsGate(threadTeachingContext, request.gate)
+              ? "thread_teaching_context"
               : null;
         if (approvalMechanism) {
           approvals[gateId] = true;
-          approvalRecords.push(buildApprovalDecisionRecord({
+          gateDecisionRecords.push(buildGateDecisionRecord({
             gate: request.gate,
-            approvalContext,
+            threadTeachingContext,
             approvalMechanism,
           }));
           continue;
@@ -105,7 +112,7 @@ async function main() {
       throw new Error(`Unsupported runx resolution request kind: ${request.kind}`);
     }
 
-    await writeApprovalRecords(options.approvalDecisionsPath, approvalRecords);
+    await writeGateDecisionRecords(options.gateDecisionsPath, gateDecisionRecords);
     const answersPath = path.join(tempDir, `answers-turn-${turn + 1}.json`);
     await writeFile(
       answersPath,
@@ -153,12 +160,12 @@ function parseArgs(argv) {
       options.contextFile = requireValue(argv, ++index, token);
       continue;
     }
-    if (token === "--approval-context") {
-      options.approvalContextPath = requireValue(argv, ++index, token);
+    if (token === "--thread-teaching-context") {
+      options.threadTeachingContextPath = requireValue(argv, ++index, token);
       continue;
     }
-    if (token === "--approval-decisions") {
-      options.approvalDecisionsPath = requireValue(argv, ++index, token);
+    if (token === "--gate-decisions") {
+      options.gateDecisionsPath = requireValue(argv, ++index, token);
       continue;
     }
     if (token === "--model") {
@@ -658,79 +665,29 @@ async function loadCallerContext(contextFile) {
   return content.trim();
 }
 
-async function loadApprovalContext(approvalContextPath) {
-  if (!approvalContextPath) {
+async function loadThreadTeachingContext(threadTeachingContextPath) {
+  if (!threadTeachingContextPath) {
     return null;
   }
-  const resolved = path.resolve(approvalContextPath);
+  const resolved = path.resolve(threadTeachingContextPath);
   if (!existsSync(resolved)) {
     return null;
   }
   const parsed = JSON.parse(await readFile(resolved, "utf8"));
-  return normalizeApprovalContext(parsed);
+  return normalizeThreadTeachingContext(parsed);
 }
 
-function normalizeApprovalContext(value) {
-  const record = value && typeof value === "object" && !Array.isArray(value) ? value : {};
-  const source = normalizeString(record.source);
-  const sourceUrl = normalizeString(record.source_url);
-  const rationale = normalizeString(record.rationale);
-  const approvedBy = normalizeString(record.approved_by);
-  const appliesTo = normalizeStringArray(record.applies_to);
-  const objectiveFingerprint = normalizeString(record.objective_fingerprint);
-  const expiresAfter = normalizeString(record.expires_after);
-  const operatorNotes = normalizeStringArray(record.operator_notes);
-  const sharedInvariants = normalizeStringArray(record.shared_invariants);
-  const decisions = normalizeApprovalDecisions(record.decisions ?? record.approval_decisions);
-  if (
-    !source
-    && !sourceUrl
-    && !rationale
-    && !approvedBy
-    && !objectiveFingerprint
-    && !expiresAfter
-    && appliesTo.length === 0
-    && operatorNotes.length === 0
-    && sharedInvariants.length === 0
-    && decisions.length === 0
-  ) {
-    return null;
-  }
-  return {
-    source,
-    source_url: sourceUrl,
-    rationale,
-    approved_by: approvedBy,
-    applies_to: appliesTo,
-    objective_fingerprint: objectiveFingerprint,
-    expires_after: expiresAfter,
-    operator_notes: operatorNotes,
-    shared_invariants: sharedInvariants,
-    decisions,
-  };
+export function threadTeachingAllowsGate(threadTeachingContext, gate) {
+  return threadTeachingContextAllowsGate(threadTeachingContext, gate);
 }
 
-export function approvalContextAllowsGate(approvalContext, gate) {
-  const gateId = normalizeString(gate?.id);
-  if (!approvalContext || !gateId) {
-    return false;
-  }
-  const explicitDecisions = Array.isArray(approvalContext.decisions) ? approvalContext.decisions : [];
-  if (
-    explicitDecisions.some((decision) =>
-      gateSelectorMatches(normalizeString(decision?.gate_id), gateId)
-    )
-  ) {
-    return true;
-  }
-  const appliesTo = Array.isArray(approvalContext.applies_to) ? approvalContext.applies_to : [];
-  if (appliesTo.length === 0) {
-    return false;
-  }
-  return appliesTo.some((entry) => gateSelectorMatches(entry, gateId));
-}
-
-function buildApprovalDecisionRecord({ gate, approvalContext, approvalMechanism }) {
+function buildGateDecisionRecord({ gate, threadTeachingContext, approvalMechanism }) {
+  const matchingAuthorization = (threadTeachingContext?.gate_authorizations ?? []).find((authorization) =>
+    gateSelectorMatches(normalizeString(authorization?.selector), normalizeString(gate?.id))
+  );
+  const sourceRecord = (threadTeachingContext?.records ?? []).find((record) =>
+    normalizeString(record?.record_id) === normalizeString(matchingAuthorization?.record_id)
+  );
   return {
     gate_id: normalizeString(gate?.id) || "unknown-gate",
     gate_reason: normalizeString(gate?.reason),
@@ -738,24 +695,29 @@ function buildApprovalDecisionRecord({ gate, approvalContext, approvalMechanism 
     resolved_at: new Date().toISOString(),
     decision: "approved",
     approval_mechanism: approvalMechanism ?? "explicit_gate_match",
-    source: approvalContext?.source ?? null,
-    source_url: approvalContext?.source_url ?? null,
-    rationale: approvalContext?.rationale ?? null,
-    approved_by: approvalContext?.approved_by ?? null,
-    applies_to: approvalContext?.applies_to ?? [],
-    objective_fingerprint: approvalContext?.objective_fingerprint ?? null,
-    expires_after: approvalContext?.expires_after ?? null,
-    operator_notes: approvalContext?.operator_notes ?? [],
-    shared_invariants: approvalContext?.shared_invariants ?? [],
+    authorization_selector: matchingAuthorization?.selector ?? null,
+    authorization_reason: matchingAuthorization?.reason ?? sourceRecord?.summary ?? null,
+    teaching_record_id: matchingAuthorization?.record_id ?? sourceRecord?.record_id ?? null,
+    teaching_kind: sourceRecord?.kind ?? matchingAuthorization?.kind ?? null,
+    source_type: sourceRecord?.source_type ?? matchingAuthorization?.source_type ?? null,
+    source_url: sourceRecord?.source_url ?? matchingAuthorization?.source_url ?? null,
+    recorded_by: sourceRecord?.recorded_by ?? matchingAuthorization?.recorded_by ?? null,
+    target_repo: sourceRecord?.target_repo ?? null,
+    subject_locator: sourceRecord?.subject_locator ?? null,
+    objective_fingerprint: sourceRecord?.objective_fingerprint ?? null,
+    applies_to: sourceRecord?.applies_to ?? [],
+    labels: sourceRecord?.labels ?? [],
+    invariants: sourceRecord?.invariants ?? [],
+    notes: sourceRecord?.notes ?? [],
   };
 }
 
-async function writeApprovalRecords(approvalDecisionsPath, approvalRecords) {
-  if (!approvalDecisionsPath || approvalRecords.length === 0) {
+async function writeGateDecisionRecords(gateDecisionsPath, gateDecisionRecords) {
+  if (!gateDecisionsPath || gateDecisionRecords.length === 0) {
     return;
   }
-  const resolved = path.resolve(approvalDecisionsPath);
-  const deduped = dedupeApprovalRecords(approvalRecords);
+  const resolved = path.resolve(gateDecisionsPath);
+  const deduped = dedupeGateDecisionRecords(gateDecisionRecords);
   await mkdir(path.dirname(resolved), { recursive: true });
   await writeFile(resolved, `${JSON.stringify(deduped, null, 2)}\n`);
 }
@@ -778,24 +740,7 @@ function normalizeStringArray(values) {
   return result;
 }
 
-function normalizeApprovalDecisions(values) {
-  const normalized = [];
-  const seen = new Set();
-  for (const value of Array.isArray(values) ? values : []) {
-    const gateId = normalizeString(value?.gate_id);
-    if (!gateId || seen.has(gateId)) {
-      continue;
-    }
-    seen.add(gateId);
-    normalized.push({
-      gate_id: gateId,
-      reason: normalizeString(value?.reason) ?? normalizeString(value?.gate_reason),
-    });
-  }
-  return normalized;
-}
-
-function dedupeApprovalRecords(records) {
+function dedupeGateDecisionRecords(records) {
   const seen = new Set();
   const deduped = [];
   for (const record of Array.isArray(records) ? records : []) {
@@ -816,19 +761,6 @@ function setHasGateMatch(values, gateId) {
     }
   }
   return false;
-}
-
-export function gateSelectorMatches(selector, gateId) {
-  const normalizedSelector = normalizeString(selector);
-  const normalizedGateId = normalizeString(gateId);
-  if (!normalizedSelector || !normalizedGateId) {
-    return false;
-  }
-  if (normalizedSelector === normalizedGateId) {
-    return true;
-  }
-  const escaped = normalizedSelector.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/\\\*/g, ".*");
-  return new RegExp(`^${escaped}$`).test(normalizedGateId);
 }
 
 function sanitizeTraceName(value) {

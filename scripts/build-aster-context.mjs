@@ -3,7 +3,11 @@ import { readdir, readFile, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { approvalContextMatchesCriteria } from "./derive-approval-context.mjs";
+import {
+  buildGateAuthorizations,
+  normalizeThreadTeachingContext,
+  threadTeachingRecordMatchesCriteria,
+} from "./thread-teaching.mjs";
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const defaultRepoRoot = path.resolve(scriptDir, "..");
@@ -32,8 +36,8 @@ export async function buildContextBundle(options = {}) {
   const targetRepo = options.targetRepo ?? repo;
   const targetSlug = slugifyRepoLike(targetRepo);
   const snapshot = await readOptionalJson(options.snapshot ? path.resolve(options.snapshot) : undefined);
-  const suppliedApprovalContext = await readOptionalJson(
-    options.approvalContextFile ? path.resolve(options.approvalContextFile) : undefined,
+  const suppliedThreadTeachingContext = await readOptionalJson(
+    options.threadTeachingContextFile ? path.resolve(options.threadTeachingContextFile) : undefined,
   );
   const doctrine = await readMarkdownDirectory(path.join(repoRoot, "doctrine"), {
     limit: 8,
@@ -57,15 +61,19 @@ export async function buildContextBundle(options = {}) {
     path.join(repoRoot, "state", "targets", `${targetSlug}.md`),
     repoRoot,
   );
-  const approvedPolicies = await readOptionalJson(path.join(repoRoot, "state", "approved-policies.json"));
+  const threadTeachingState = await readOptionalJson(path.join(repoRoot, "state", "thread-teaching.json"));
   const targetSummary = target ? summarizeTargetDoc(target) : null;
   const artifactSignals = await collectArtifactSignals(artifactRoot, repoRoot, {
     limit: Number(options.maxArtifacts ?? 8),
   });
-  const approvalCriteria = {
+  const threadTeachingCriteria = {
     objectiveFingerprint: options.objectiveFingerprint,
+    recordKinds: options.threadTeachingRecordKinds,
+    targetRepo,
+    subjectLocator: options.subjectLocator ?? targetRepo,
+    labels: options.threadTeachingLabels,
     appliesTo: uniqueStrings([
-      ...(Array.isArray(options.approvalAppliesTo) ? options.approvalAppliesTo : []),
+      ...(Array.isArray(options.threadTeachingAppliesTo) ? options.threadTeachingAppliesTo : []),
       options.lane ? `${options.lane}.*` : null,
       options.lane,
     ]),
@@ -84,15 +92,14 @@ export async function buildContextBundle(options = {}) {
       pr_number: options.prNumber ?? null,
       issue_url: options.issueUrl ?? null,
     },
-    approval_context: buildApprovalContext(
-      options,
-      suppliedApprovalContext?.approval_context ?? suppliedApprovalContext,
-      approvalCriteria,
+    thread_teaching_context: buildThreadTeachingContext(
+      suppliedThreadTeachingContext,
+      threadTeachingCriteria,
     ),
-    approval_memory: buildApprovalMemory({
-      approvedPolicies,
+    thread_teaching: buildDerivedThreadTeaching({
+      threadTeachingState,
       targetRepo,
-      criteria: approvalCriteria,
+      criteria: threadTeachingCriteria,
     }),
     doctrine,
     state: {
@@ -142,27 +149,27 @@ export function renderContextPrompt(bundle) {
     "If the live request envelope conflicts with derived context, trust the live envelope and receipts.",
   );
 
-  if (bundle.approval_context) {
+  if (bundle.thread_teaching_context) {
     lines.push(
       "",
-      "## Active Approval Context",
+      "## Active Thread Teaching",
       "",
-      "Treat this as explicit human guidance for the current run. It narrows the action; it does not widen authority beyond lane policy.",
+      "Treat this as explicit human teaching for the current run. It narrows the action, teaches future runs, and does not widen authority beyond lane policy.",
     );
-    const approvalLines = renderApprovalContextLines(bundle.approval_context);
-    if (approvalLines.length > 0) {
-      lines.push(...approvalLines);
+    const threadTeachingLines = renderThreadTeachingContextLines(bundle.thread_teaching_context);
+    if (threadTeachingLines.length > 0) {
+      lines.push(...threadTeachingLines);
     }
   }
 
-  if (bundle.approval_memory?.matched_policies?.length > 0) {
+  if (bundle.thread_teaching?.matched_records?.length > 0) {
     lines.push(
       "",
-      "## Derived Approval Memory",
+      "## Derived Thread Teaching",
       "",
-      "These are rebuildable precedents derived from trusted approval-thread evidence. They help with consistency; they do not outrank live approval context or lane policy.",
+      "These are rebuildable precedents derived from trusted issue and PR thread evidence. They help with consistency; they do not outrank live thread context or lane policy.",
     );
-    lines.push(...renderApprovalMemoryLines(bundle.approval_memory));
+    lines.push(...renderDerivedThreadTeachingLines(bundle.thread_teaching));
   }
 
   if (bundle.doctrine.length > 0) {
@@ -237,9 +244,9 @@ export function renderContextPrompt(bundle) {
 
 function parseArgs(argv) {
   const options = {
-    approvalNotes: [],
-    approvalInvariants: [],
-    approvalAppliesTo: [],
+    threadTeachingRecordKinds: [],
+    threadTeachingLabels: [],
+    threadTeachingAppliesTo: [],
   };
   for (let index = 0; index < argv.length; index += 1) {
     const token = argv[index];
@@ -283,40 +290,24 @@ function parseArgs(argv) {
       options.issueUrl = requireValue(argv, ++index, token);
       continue;
     }
-    if (token === "--approval-source") {
-      options.approvalSource = requireValue(argv, ++index, token);
+    if (token === "--thread-teaching-context-file") {
+      options.threadTeachingContextFile = requireValue(argv, ++index, token);
       continue;
     }
-    if (token === "--approval-context-file") {
-      options.approvalContextFile = requireValue(argv, ++index, token);
+    if (token === "--thread-teaching-record-kind") {
+      options.threadTeachingRecordKinds.push(requireValue(argv, ++index, token));
       continue;
     }
-    if (token === "--approval-source-url") {
-      options.approvalSourceUrl = requireValue(argv, ++index, token);
-      continue;
-    }
-    if (token === "--approval-rationale") {
-      options.approvalRationale = requireValue(argv, ++index, token);
-      continue;
-    }
-    if (token === "--approval-note") {
-      options.approvalNotes.push(requireValue(argv, ++index, token));
-      continue;
-    }
-    if (token === "--approval-invariant") {
-      options.approvalInvariants.push(requireValue(argv, ++index, token));
-      continue;
-    }
-    if (token === "--approved-by") {
-      options.approvedBy = requireValue(argv, ++index, token);
+    if (token === "--thread-teaching-label") {
+      options.threadTeachingLabels.push(requireValue(argv, ++index, token));
       continue;
     }
     if (token === "--objective-fingerprint") {
       options.objectiveFingerprint = requireValue(argv, ++index, token);
       continue;
     }
-    if (token === "--approval-applies-to") {
-      options.approvalAppliesTo.push(requireValue(argv, ++index, token));
+    if (token === "--thread-teaching-applies-to") {
+      options.threadTeachingAppliesTo.push(requireValue(argv, ++index, token));
       continue;
     }
     if (token === "--now") {
@@ -352,68 +343,35 @@ function parseArgs(argv) {
   return options;
 }
 
-function buildApprovalContext(options = {}, suppliedContext = null, criteria = {}) {
-  const source = firstString(options.approvalSource) || firstString(suppliedContext?.source) || null;
-  const sourceUrl = firstString(options.approvalSourceUrl) || firstString(suppliedContext?.source_url) || null;
-  const rationale = firstString(options.approvalRationale) || firstString(suppliedContext?.rationale) || null;
-  const approvedBy = firstString(options.approvedBy) || firstString(suppliedContext?.approved_by) || null;
-  const appliesTo = uniqueStrings([
-    ...(Array.isArray(suppliedContext?.applies_to) ? suppliedContext.applies_to : []),
-    ...(Array.isArray(options.approvalAppliesTo) ? options.approvalAppliesTo : []),
-  ]);
-  const objectiveFingerprint = firstString(options.objectiveFingerprint)
-    || firstString(suppliedContext?.objective_fingerprint)
-    || null;
-  const expiresAfter = firstString(suppliedContext?.expires_after) || null;
-  const operatorNotes = uniqueStrings([
-    ...(Array.isArray(suppliedContext?.operator_notes) ? suppliedContext.operator_notes : []),
-    ...(Array.isArray(options.approvalNotes) ? options.approvalNotes : []),
-  ]);
-  const sharedInvariants = uniqueStrings([
-    ...(Array.isArray(suppliedContext?.shared_invariants) ? suppliedContext.shared_invariants : []),
-    ...(Array.isArray(options.approvalInvariants) ? options.approvalInvariants : []),
-  ]);
-  const decisions = Array.isArray(suppliedContext?.decisions)
-    ? suppliedContext.decisions
-    : Array.isArray(suppliedContext?.approval_decisions)
-      ? suppliedContext.approval_decisions
-      : [];
-  if (
-    !source
-    && !sourceUrl
-    && !rationale
-    && !approvedBy
-    && !objectiveFingerprint
-    && !expiresAfter
-    && operatorNotes.length === 0
-    && sharedInvariants.length === 0
-    && appliesTo.length === 0
-  ) {
+function buildThreadTeachingContext(suppliedContext = null, criteria = {}) {
+  const normalizedContext = normalizeThreadTeachingContext(
+    suppliedContext?.thread_teaching_context ?? suppliedContext,
+  );
+  if (!normalizedContext) {
     return null;
   }
-  const approvalContext = {
-    source,
-    source_url: sourceUrl,
-    rationale,
-    approved_by: approvedBy,
-    applies_to: appliesTo,
-    objective_fingerprint: objectiveFingerprint,
-    expires_after: expiresAfter,
-    operator_notes: operatorNotes,
-    shared_invariants: sharedInvariants,
-    decisions,
+  const records = normalizedContext.records
+    .filter((record) => threadTeachingRecordMatchesCriteria(record, criteria))
+    .slice(0, 8);
+  if (records.length === 0) {
+    return null;
+  }
+  return {
+    derived_at: firstString(normalizedContext.derived_at) || null,
+    criteria: normalizedContext.criteria ?? {},
+    records,
+    gate_authorizations: buildGateAuthorizations(records),
   };
-  return approvalContextMatchesCriteria(approvalContext, criteria) ? approvalContext : null;
 }
 
-function buildApprovalMemory({ approvedPolicies, targetRepo, criteria }) {
-  const policies = Array.isArray(approvedPolicies?.policies) ? approvedPolicies.policies : [];
-  const matchedPolicies = policies
+function buildDerivedThreadTeaching({ threadTeachingState, targetRepo, criteria }) {
+  const records = Array.isArray(threadTeachingState?.records) ? threadTeachingState.records : [];
+  const matchedRecords = records
     .filter((entry) => firstString(entry?.repo) === firstString(targetRepo))
-    .filter((entry) => approvalContextMatchesCriteria(entry?.approval_context, criteria))
+    .filter((entry) => threadTeachingRecordMatchesCriteria(entry?.thread_teaching_record, criteria))
     .sort((left, right) =>
-      Date.parse(firstString(right?.approval_context?.matched_from?.created_at) || "")
-      - Date.parse(firstString(left?.approval_context?.matched_from?.created_at) || "")
+      Date.parse(firstString(right?.thread_teaching_record?.recorded_at) || "")
+      - Date.parse(firstString(left?.thread_teaching_record?.recorded_at) || "")
     )
     .slice(0, 4)
     .map((entry) => ({
@@ -422,80 +380,68 @@ function buildApprovalMemory({ approvedPolicies, targetRepo, criteria }) {
       thread_title: firstString(entry?.thread_title),
       thread_url: firstString(entry?.thread_url),
       status: firstString(entry?.status) || "active",
-      approval_context: entry?.approval_context ?? null,
+      thread_teaching_record: entry?.thread_teaching_record ?? null,
     }));
 
-  if (matchedPolicies.length === 0) {
+  if (matchedRecords.length === 0) {
     return null;
   }
 
   return {
-    generated_at: firstString(approvedPolicies?.generated_at),
-    source: approvedPolicies?.source ?? null,
-    matched_policies: matchedPolicies,
+    generated_at: firstString(threadTeachingState?.generated_at),
+    source: threadTeachingState?.source ?? null,
+    matched_records: matchedRecords,
   };
 }
 
-function renderApprovalContextLines(approvalContext) {
+function renderThreadTeachingContextLines(threadTeachingContext) {
   const lines = [];
-  if (approvalContext.source) {
-    lines.push(`- source: \`${approvalContext.source}\``);
+  if (threadTeachingContext.derived_at) {
+    lines.push(`- derived_at: \`${threadTeachingContext.derived_at}\``);
   }
-  if (approvalContext.source_url) {
-    lines.push(`- source_url: ${approvalContext.source_url}`);
-  }
-  if (approvalContext.approved_by) {
-    lines.push(`- approved_by: \`${approvalContext.approved_by}\``);
-  }
-  if (approvalContext.rationale) {
-    lines.push(`- rationale: ${approvalContext.rationale}`);
-  }
-  if (approvalContext.objective_fingerprint) {
-    lines.push(`- objective_fingerprint: \`${approvalContext.objective_fingerprint}\``);
-  }
-  if (approvalContext.expires_after) {
-    lines.push(`- expires_after: \`${approvalContext.expires_after}\``);
-  }
-  if (Array.isArray(approvalContext.applies_to) && approvalContext.applies_to.length > 0) {
-    lines.push(`- applies_to: ${approvalContext.applies_to.map((entry) => `\`${entry}\``).join(", ")}`);
-  }
-  if (Array.isArray(approvalContext.shared_invariants) && approvalContext.shared_invariants.length > 0) {
-    lines.push("- shared invariants:");
-    for (const invariant of approvalContext.shared_invariants) {
-      lines.push(`  - ${invariant}`);
+  for (const record of threadTeachingContext.records ?? []) {
+    lines.push(`- \`${record.kind}\`: ${record.summary}`);
+    if (record.source_url) {
+      lines.push(`  - source_url: ${record.source_url}`);
     }
-  }
-  if (Array.isArray(approvalContext.operator_notes) && approvalContext.operator_notes.length > 0) {
-    lines.push("- operator notes:");
-    for (const note of approvalContext.operator_notes) {
-      lines.push(`  - ${note}`);
+    if (record.recorded_by) {
+      lines.push(`  - recorded_by: \`${record.recorded_by}\``);
     }
-  }
-  if (Array.isArray(approvalContext.decisions) && approvalContext.decisions.length > 0) {
-    lines.push("- approved gates:");
-    for (const decision of approvalContext.decisions) {
-      const gateId = firstString(decision?.gate_id) || "unknown-gate";
-      const reason = firstString(decision?.reason) || firstString(decision?.gate_reason);
-      lines.push(`  - \`${gateId}\`${reason ? `: ${reason}` : ""}`);
+    if (record.objective_fingerprint) {
+      lines.push(`  - objective_fingerprint: \`${record.objective_fingerprint}\``);
+    }
+    if (Array.isArray(record.applies_to) && record.applies_to.length > 0) {
+      lines.push(`  - applies_to: ${record.applies_to.map((entry) => `\`${entry}\``).join(", ")}`);
+    }
+    for (const invariant of record.invariants ?? []) {
+      lines.push(`  - invariant: ${invariant}`);
+    }
+    for (const note of record.notes ?? []) {
+      lines.push(`  - note: ${note}`);
+    }
+    for (const decision of record.decisions ?? []) {
+      lines.push(`  - decision: \`${firstString(decision?.gate_id)}\` = \`${firstString(decision?.decision)}\``);
     }
   }
   return lines;
 }
 
-function renderApprovalMemoryLines(approvalMemory) {
+function renderDerivedThreadTeachingLines(threadTeaching) {
   const lines = [];
-  if (approvalMemory.generated_at) {
-    lines.push(`- derived_at: \`${approvalMemory.generated_at}\``);
+  if (threadTeaching.generated_at) {
+    lines.push(`- derived_at: \`${threadTeaching.generated_at}\``);
   }
-  for (const policy of approvalMemory.matched_policies ?? []) {
-    const threadLabel = policy.thread ? `\`${policy.thread}\`` : "`thread`";
-    const title = firstString(policy.thread_title) || "approval precedent";
+  for (const recordEntry of threadTeaching.matched_records ?? []) {
+    const threadLabel = recordEntry.thread ? `\`${recordEntry.thread}\`` : "`thread`";
+    const title = firstString(recordEntry.thread_title) || "thread-teaching precedent";
     lines.push(`- ${threadLabel}: ${title}`);
-    if (policy.thread_url) {
-      lines.push(`  - source_url: ${policy.thread_url}`);
+    if (recordEntry.thread_url) {
+      lines.push(`  - source_url: ${recordEntry.thread_url}`);
     }
-    const approvalLines = renderApprovalContextLines(policy.approval_context ?? {});
-    for (const line of approvalLines.slice(0, 5)) {
+    const threadTeachingLines = renderThreadTeachingContextLines({
+      records: [recordEntry.thread_teaching_record ?? {}],
+    });
+    for (const line of threadTeachingLines.slice(0, 6)) {
       lines.push(`  ${line}`);
     }
   }

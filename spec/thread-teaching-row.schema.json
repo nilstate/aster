@@ -1,0 +1,218 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:aster:schema:thread-teaching-row:v1",
+  "title": "runx Aster Thread Teaching Row",
+  "description": "Canonical schema for one thread-teaching-derived teaching row.",
+  "type": "object",
+  "properties": {
+    "kind": {
+      "const": "runx.aster-thread-teaching-row.v1"
+    },
+    "generated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "repo": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$"
+    },
+    "thread": {
+      "type": "string",
+      "minLength": 1
+    },
+    "thread_kind": {
+      "type": "string",
+      "enum": [
+        "issue",
+        "pr"
+      ]
+    },
+    "thread_number": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "thread_title": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "thread_url": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "thread_state": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "record_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "record_kind": {
+      "type": "string",
+      "enum": [
+        "approval",
+        "lesson",
+        "target_norm",
+        "selection_feedback",
+        "publish_authorization",
+        "memory_correction"
+      ]
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "active",
+        "expired",
+        "superseded"
+      ]
+    },
+    "recorded_at": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date-time"
+    },
+    "recorded_by": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "source_type": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "source_url": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "target_repo": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "subject_locator": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "objective_fingerprint": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "summary": {
+      "type": "string",
+      "minLength": 1
+    },
+    "applies_to": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "labels": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "invariants": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "notes": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "decisions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "gate_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "decision": {
+            "type": "string",
+            "enum": [
+              "allow",
+              "deny"
+            ]
+          },
+          "reason": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "gate_id",
+          "decision",
+          "reason"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "supersedes": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    }
+  },
+  "required": [
+    "kind",
+    "generated_at",
+    "repo",
+    "thread",
+    "thread_kind",
+    "thread_number",
+    "thread_title",
+    "thread_url",
+    "thread_state",
+    "record_id",
+    "record_kind",
+    "status",
+    "recorded_at",
+    "recorded_by",
+    "source_type",
+    "source_url",
+    "target_repo",
+    "subject_locator",
+    "objective_fingerprint",
+    "summary",
+    "applies_to",
+    "labels",
+    "invariants",
+    "notes",
+    "decisions",
+    "supersedes"
+  ],
+  "additionalProperties": false
+}

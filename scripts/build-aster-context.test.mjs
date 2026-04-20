@@ -57,53 +57,44 @@ test("renderContextPrompt includes doctrine and state sections", async () => {
   assert.match(prompt, /Target Dossier/);
 });
 
-test("buildContextBundle and prompt carry explicit approval context", async () => {
-  const bundle = await buildContextBundle({
-    repoRoot,
-    lane: "docs-pr",
-    subjectKind: "repository",
-    subjectLocator: "nilstate/aster",
-    repo: "nilstate/aster",
-    targetRepo: "nilstate/aster",
-    approvalSource: "issue_comment",
-    approvalSourceUrl: "https://github.com/nilstate/aster/issues/42#issuecomment-1",
-    approvalRationale: "Keep the change bounded to the docs surface and preserve the public governance story.",
-    approvalNotes: ["Prefer explicit review notes over hidden operator intuition."],
-    approvalInvariants: ["Do not widen authority beyond the current lane."],
-    approvedBy: "kam",
-  });
-
-  assert.equal(bundle.approval_context?.source, "issue_comment");
-  assert.deepEqual(bundle.approval_context?.shared_invariants, ["Do not widen authority beyond the current lane."]);
-
-  const prompt = renderContextPrompt(bundle);
-  assert.match(prompt, /## Active Approval Context/);
-  assert.match(prompt, /issue_comment/);
-  assert.match(prompt, /Do not widen authority beyond the current lane/);
-  assert.match(prompt, /Prefer explicit review notes over hidden operator intuition/);
-});
-
-test("buildContextBundle merges file-derived approval context with explicit overrides", async () => {
-  const tempDir = await mkdtemp(path.join(os.tmpdir(), "aster-approval-context-"));
-  const approvalContextPath = path.join(tempDir, "approval-context.json");
+test("buildContextBundle and prompt carry thread teaching context", async () => {
+  const tempDir = await mkdtemp(path.join(os.tmpdir(), "aster-thread-teaching-"));
+  const threadTeachingContextPath = path.join(tempDir, "thread-teaching-context.json");
 
   await writeFile(
-    approvalContextPath,
+    threadTeachingContextPath,
     `${JSON.stringify({
-      source: "issue_comment",
-      source_url: "https://github.com/nilstate/aster/issues/42#issuecomment-2",
-      rationale: "Stay inside the bounded issue-to-plan surface.",
-      approved_by: "kam",
-      operator_notes: [
-        "Cite the prior approval context back to the maintainer when reusing it.",
-      ],
-      shared_invariants: [
-        "Do not open a PR until triage explicitly approves build.",
-      ],
-      decisions: [
+      records: [
         {
-          gate_id: "issue-triage.plan",
-          reason: "Planning is approved; build is still gated.",
+          record_id: "record-1",
+          kind: "approval",
+          summary: "Stay inside the bounded issue-to-plan surface.",
+          recorded_by: "kam",
+          source_type: "issue_comment",
+          source_url: "https://github.com/nilstate/aster/issues/42#issuecomment-2",
+          objective_fingerprint: "issue:runx-42",
+          applies_to: ["issue-triage.plan"],
+          invariants: [
+            "Do not open a PR until triage explicitly approves build.",
+          ],
+          notes: [
+            "Cite the prior thread teaching back to the maintainer when reusing it.",
+          ],
+          labels: ["triage"],
+          decisions: [
+            {
+              gate_id: "issue-triage.plan",
+              decision: "allow",
+              reason: "Planning is approved; build is still gated.",
+            },
+          ],
+          supersedes: [],
+          repo: "nilstate/aster",
+          thread_kind: "issue",
+          thread_number: 42,
+          author: "kam",
+          author_association: "OWNER",
+          recorded_at: "2026-04-20T01:00:00Z",
         },
       ],
     }, null, 2)}\n`,
@@ -117,24 +108,25 @@ test("buildContextBundle merges file-derived approval context with explicit over
       subjectLocator: "nilstate/aster#issue/42",
       repo: "nilstate/aster",
       targetRepo: "nilstate/aster",
-      approvalContextFile: approvalContextPath,
-      approvalNotes: [
-        "Reflect any reused approval context into the receipt packet.",
+      objectiveFingerprint: "issue:runx-42",
+      threadTeachingContextFile: threadTeachingContextPath,
+      threadTeachingAppliesTo: [
+        "issue-triage.plan",
       ],
     });
 
-    assert.equal(bundle.approval_context?.source, "issue_comment");
-    assert.equal(bundle.approval_context?.approved_by, "kam");
-    assert.deepEqual(bundle.approval_context?.shared_invariants, [
+    assert.equal(bundle.thread_teaching_context?.records[0]?.source_type, "issue_comment");
+    assert.equal(bundle.thread_teaching_context?.records[0]?.recorded_by, "kam");
+    assert.deepEqual(bundle.thread_teaching_context?.records[0]?.invariants, [
       "Do not open a PR until triage explicitly approves build.",
     ]);
-    assert.deepEqual(bundle.approval_context?.operator_notes, [
-      "Cite the prior approval context back to the maintainer when reusing it.",
-      "Reflect any reused approval context into the receipt packet.",
+    assert.deepEqual(bundle.thread_teaching_context?.records[0]?.notes, [
+      "Cite the prior thread teaching back to the maintainer when reusing it.",
     ]);
-    assert.deepEqual(bundle.approval_context?.decisions, [
+    assert.deepEqual(bundle.thread_teaching_context?.records[0]?.decisions, [
       {
         gate_id: "issue-triage.plan",
+        decision: "allow",
         reason: "Planning is approved; build is still gated.",
       },
     ]);
@@ -142,7 +134,8 @@ test("buildContextBundle merges file-derived approval context with explicit over
     const prompt = renderContextPrompt(bundle);
     assert.match(prompt, /Stay inside the bounded issue-to-plan surface/);
     assert.match(prompt, /issue-triage\.plan/);
-    assert.match(prompt, /Reflect any reused approval context into the receipt packet/);
+    assert.match(prompt, /## Active Thread Teaching/);
+    assert.match(prompt, /Do not open a PR until triage explicitly approves build/);
   } finally {
     await rm(tempDir, { recursive: true, force: true });
   }

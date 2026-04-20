@@ -32,6 +32,9 @@ async function main(argv = process.argv.slice(2)) {
 }
 
 export async function runGovernedPrLane(options) {
+  if (!options.threadTeachingContextFile || !options.collaborationIssue) {
+    throw new Error(`${options.lane} requires --collaboration-issue and --thread-teaching-context-file.`);
+  }
   const verificationCatalog = loadVerificationProfileCatalogSync(repoRoot);
   const targetRepo = options.targetRepo ?? options.defaultRepo;
   const sourceId = options.sourceId ?? `${options.lane}-${normalizeTaskId(options.requestTitle)}`;
@@ -101,6 +104,14 @@ export async function runGovernedPrLane(options) {
       targetRepo,
       "--snapshot",
       repoSnapshotPath,
+      "--thread-teaching-context-file",
+      path.resolve(options.threadTeachingContextFile),
+      "--thread-teaching-record-kind",
+      "approval",
+      "--thread-teaching-record-kind",
+      "publish_authorization",
+      "--thread-teaching-applies-to",
+      `${options.lane}.publish`,
       "--receipt-dir",
       receiptDir,
       "--trace-dir",
@@ -180,6 +191,9 @@ export async function runGovernedPrLane(options) {
       requestBody: options.requestBody,
       sourceId,
       sourceUrl: options.sourceUrl,
+      collaborationRepo: options.collaborationRepo ?? options.defaultRepo,
+      collaborationIssue: options.collaborationIssue,
+      collaborationIssueUrl: options.collaborationIssueUrl,
       targetRepo,
       taskId,
       verificationProfile: verificationPlan.profile_id,
@@ -272,6 +286,9 @@ export function buildLanePrBody({
   requestBody,
   sourceId,
   sourceUrl,
+  collaborationRepo,
+  collaborationIssue,
+  collaborationIssueUrl,
   targetRepo,
   taskId,
   verificationProfile,
@@ -291,9 +308,13 @@ export function buildLanePrBody({
     `- Lane: \`${lane}\``,
     `- Task id: \`${taskId}\``,
     `- Source id: \`${sourceId}\``,
+    `- Collaboration issue: \`${collaborationRepo ?? targetRepo}#${collaborationIssue}\``,
   ];
   if (sourceUrl) {
     lines.push(`- Source URL: ${sourceUrl}`);
+  }
+  if (collaborationIssueUrl) {
+    lines.push(`- Collaboration issue URL: ${collaborationIssueUrl}`);
   }
   if (requestBody?.trim()) {
     lines.push("", "## Request Context", "", requestBody.trim());
@@ -378,6 +399,22 @@ function parseArgs(argv) {
       options.sourceUrl = requireValue(argv, ++index, token);
       continue;
     }
+    if (token === "--collaboration-repo") {
+      options.collaborationRepo = requireValue(argv, ++index, token);
+      continue;
+    }
+    if (token === "--collaboration-issue") {
+      options.collaborationIssue = requireValue(argv, ++index, token);
+      continue;
+    }
+    if (token === "--collaboration-issue-url") {
+      options.collaborationIssueUrl = requireValue(argv, ++index, token);
+      continue;
+    }
+    if (token === "--thread-teaching-context-file") {
+      options.threadTeachingContextFile = requireValue(argv, ++index, token);
+      continue;
+    }
     if (token === "--artifact-root") {
       options.artifactRoot = requireValue(argv, ++index, token);
       continue;
@@ -409,7 +446,17 @@ function parseArgs(argv) {
     throw new Error(`Unknown argument: ${token}`);
   }
 
-  for (const required of ["lane", "runxRoot", "defaultRepo", "targetRepo", "requestTitle", "requestBody", "scafldBin"]) {
+  for (const required of [
+    "lane",
+    "runxRoot",
+    "defaultRepo",
+    "targetRepo",
+    "requestTitle",
+    "requestBody",
+    "scafldBin",
+    "collaborationIssue",
+    "threadTeachingContextFile",
+  ]) {
     if (!options[required]) {
       throw new Error(`--${required.replace(/[A-Z]/g, (value) => `-${value.toLowerCase()}`)} is required.`);
     }

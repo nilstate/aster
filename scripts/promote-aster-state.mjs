@@ -49,8 +49,8 @@ export function buildPromotionDrafts({ lane, contextBundle, runResult, now = new
     feed_channel: feedChannelForLane(lane, runResult?.status ?? "unknown"),
     main_feed_eligible: isMainFeedEligible(lane, runResult?.status ?? "unknown"),
     subject: contextBundle?.subject ?? {},
-    approval_context: contextBundle?.approval_context ?? null,
-    approval_decisions: Array.isArray(contextBundle?.approval_decisions) ? contextBundle.approval_decisions : [],
+    thread_teaching_context: contextBundle?.thread_teaching_context ?? null,
+    gate_decisions: Array.isArray(contextBundle?.gate_decisions) ? contextBundle.gate_decisions : [],
     signal,
   };
 
@@ -152,7 +152,7 @@ function buildReflectionDraft({ date, lane, contextBundle, packet }) {
     lines.push(`- Receipt: \`${packet.receipt_id}\``);
   }
 
-  appendApprovalContextLines(lines, packet);
+  appendThreadTeachingLines(lines, packet);
 
   lines.push("", "## Signals", "");
   lines.push(`- Summary: ${packet.summary}`);
@@ -215,7 +215,7 @@ function buildHistoryDraft({ date, lane, contextBundle, packet }) {
   if (packet.receipt_id) {
     lines.push("", `Receipt reference: \`${packet.receipt_id}\`.`);
   }
-  appendApprovalContextLines(lines, packet);
+  appendThreadTeachingLines(lines, packet);
   lines.push("");
   return `${lines.join("\n")}\n`;
 }
@@ -265,42 +265,33 @@ function requireValue(argv, index, flag) {
   return value;
 }
 
-function appendApprovalContextLines(lines, packet) {
-  if (!packet?.approval_context && (!Array.isArray(packet?.approval_decisions) || packet.approval_decisions.length === 0)) {
+function appendThreadTeachingLines(lines, packet) {
+  if (!packet?.thread_teaching_context && (!Array.isArray(packet?.gate_decisions) || packet.gate_decisions.length === 0)) {
     return;
   }
-  lines.push("", "## Approval Context", "");
-  if (packet?.approval_context?.source) {
-    lines.push(`- Source: \`${packet.approval_context.source}\``);
+  lines.push("", "## Thread Teaching", "");
+  for (const record of packet?.thread_teaching_context?.records ?? []) {
+    lines.push(`- \`${record.kind}\`: ${record.summary}`);
+    if (record.source_url) {
+      lines.push(`- Source URL: ${record.source_url}`);
+    }
+    if (record.recorded_by) {
+      lines.push(`- Recorded by: \`${record.recorded_by}\``);
+    }
+    for (const invariant of record.invariants ?? []) {
+      lines.push(`- Invariant: ${invariant}`);
+    }
+    for (const note of record.notes ?? []) {
+      lines.push(`- Note: ${note}`);
+    }
   }
-  if (packet?.approval_context?.source_url) {
-    lines.push(`- Source URL: ${packet.approval_context.source_url}`);
-  }
-  if (packet?.approval_context?.approved_by) {
-    lines.push(`- Approved by: \`${packet.approval_context.approved_by}\``);
-  }
-  if (packet?.approval_context?.rationale) {
-    lines.push(`- Rationale: ${packet.approval_context.rationale}`);
-  }
-  const invariants = Array.isArray(packet?.approval_context?.shared_invariants)
-    ? packet.approval_context.shared_invariants
-    : [];
-  for (const invariant of invariants) {
-    lines.push(`- Invariant: ${invariant}`);
-  }
-  const notes = Array.isArray(packet?.approval_context?.operator_notes)
-    ? packet.approval_context.operator_notes
-    : [];
-  for (const note of notes) {
-    lines.push(`- Operator note: ${note}`);
-  }
-  const decisions = Array.isArray(packet?.approval_decisions) ? packet.approval_decisions : [];
+  const decisions = Array.isArray(packet?.gate_decisions) ? packet.gate_decisions : [];
   for (const decision of decisions) {
     const gateId = firstString(decision?.gate_id);
-    const gateReason = firstString(decision?.gate_reason);
-    lines.push(`- Approved gate: \`${gateId || "unknown-gate"}\`${gateReason ? ` · ${gateReason}` : ""}`);
+    const gateReason = firstString(decision?.authorization_reason) || firstString(decision?.gate_reason);
+    lines.push(`- Gate decision: \`${gateId || "unknown-gate"}\`${gateReason ? ` · ${gateReason}` : ""}`);
   }
-  lines.push("- Approval guidance narrows the run; it does not widen authority beyond lane policy.");
+  lines.push("- Thread teaching narrows the run, records human teaching, and does not widen authority beyond lane policy.");
 }
 
 function tryParseJson(value) {

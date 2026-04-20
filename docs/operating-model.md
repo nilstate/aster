@@ -19,8 +19,8 @@ A third rule is what keeps the repo credible over time: capability should grow
 by becoming more explicit.
 
 If the system needs more sophistication, that should show up as better docs,
-sharper skill context, stronger typed packets, and clearer approvals, not as
-more hidden magic.
+sharper skill context, stronger typed packets, and clearer thread teaching, not
+as more hidden magic.
 
 ## Boundary
 
@@ -29,8 +29,8 @@ that runtime.
 
 That means:
 
-- `runx` may own generic primitives such as receipts, approvals, artifacts, and
-  generic memory
+- `runx` may own generic primitives such as receipts, evidence indexes,
+  artifacts, and generic memory
 - `aster` owns operator semantics such as priorities, targets,
   reflections, and public narrative
 
@@ -75,21 +75,22 @@ artifact, the repo should not pretend it is ready for automatic execution.
 
 Public or mutating work stays gated:
 
-- repo writes require explicit approval
-- public posts require explicit approval
-- PR creation requires explicit approval
+- repo writes require explicit thread-teaching authorization
+- public posts require explicit thread-teaching authorization
+- PR creation requires explicit thread-teaching authorization
 
-In practice, `aster` uses three approval shapes:
+In practice, `aster` uses three gate shapes:
 
 1. issue or PR intake plus triage: the repo gets a public, typed routing
    decision before mutation
-2. workflow-level gate: only specific workflows auto-approve named `runx` gates
+2. workflow-level gate: only specific workflows resolve named `runx` gates from
+   trusted thread-teaching records
 3. PR review: the generated branch still lands through normal GitHub review
 
 This repo exists to prove governed automation, not to bypass it.
 
-Approval should therefore remain meaningful. The system should not dilute human
-review into a ceremonial checkbox after the fact.
+Thread teaching should therefore remain meaningful. The system should not
+dilute human review into a ceremonial checkbox after the fact.
 
 ### 4. Apply
 
@@ -99,7 +100,7 @@ draft-only to bounded local patches and then to PR publication.
 That progression should be gradual:
 
 1. introspection and draft packets
-2. patch plans with approval
+2. patch plans with thread-teaching authorization
 3. local patch application in isolated branches
 4. PR publication after review
 
@@ -132,7 +133,7 @@ want to inspect and use."
 - every mutating step should be visible in receipts
 - external claims should stay grounded in repo evidence unless a research source
   is explicitly supplied
-- approvals should remain first-class and human-visible
+- thread teaching should remain first-class and human-visible
 - repo identity docs should describe the real current stage, not an aspirational
   future as if it already exists
 - repeated failure modes should feed skill or context hardening, not endless
@@ -149,6 +150,10 @@ want to inspect and use."
 
 The important rule is that receipts stay canonical. Derived context is allowed
 to help the next run, but it must stay rebuildable from evidence.
+
+The concrete mechanism for that is thread teaching: issues and PR threads are
+the canonical teaching layer, while `state/thread-teaching.json` is a
+rebuildable derived cache for runtime context and training.
 
 ## Remaining Gap
 

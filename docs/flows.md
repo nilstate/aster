@@ -17,8 +17,10 @@ This lane has two entry modes:
 1. issue mode listens for every normal issue except `[skill]` proposals, runs
    `support-triage`, prepares one explicit triage decision, optionally runs
    `objective-decompose`, posts the triage comment back to the issue, and
-   starts isolated `issue-to-pr` workers only when triage explicitly approves
-   build. Replay guard blocks duplicate reruns for the same issue fingerprint
+   starts isolated `issue-to-pr` workers only when thread teaching
+   authorizes bounded build work. Replay guard blocks duplicate reruns for the
+   same issue fingerprint, and the live issue or PR thread is also parsed for
+   reusable lessons, norms, and explicit gate authorizations
 2. PR mode builds a live PR snapshot, runs it through `github-triage`, and
    posts a maintainer comment back to the PR. Public-value and replay gates
    block low-signal or duplicate comments for the same head SHA
@@ -28,13 +30,15 @@ This lane has two entry modes:
 Runs on manual dispatch for one bounded bugfix request. The workflow checks out
 the target repo, normalizes the request into the governed issue-to-PR contract,
 runs the repo through the shared worker path, validates with the target's
-verification profile, and opens a draft `runx/*` PR plus receipts.
+verification profile, and opens a draft `runx/*` PR plus receipts. Publication
+is hard-gated by a collaboration issue that authorizes `fix-pr.publish`.
 
 ## `docs-pr`
 
 Runs on manual dispatch for one bounded docs or explanation request. The
 workflow uses the same governed PR runner as `fix-pr`, but tightens the request
-to docs-only changes before validation and draft PR publication.
+to docs-only changes before validation and draft PR publication. Publication is
+hard-gated by a collaboration issue that authorizes `docs-pr.publish`.
 
 ## `skill-lab`
 
@@ -47,7 +51,8 @@ and opens a draft PR with the generated proposal.
 Runs on manual dispatch for an external target repo. The workflow checks out
 the target, prepares a portable upstream `SKILL.md`, validates the contribution
 artifacts and public language, uploads the artifact packet, and optionally
-opens a draft PR against the target repo.
+opens a draft PR against the target repo. When `publish=true`, the workflow
+requires a collaboration issue that authorizes `skill-upstream.publish`.
 
 The first proving-ground target is `nilstate/icey-cli`.
 

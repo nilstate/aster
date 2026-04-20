@@ -187,20 +187,21 @@ jobs:
             jq -r '"- " + (.reason // "unknown")' "$GITHUB_WORKSPACE/.artifacts/issue-triage/issue/replay-guard.json" >> "$GITHUB_STEP_SUMMARY"
           fi
 
-      - name: Derive issue approval context
+      - name: Derive thread teaching context
         if: ${{ steps.preflight.outputs.enabled == 'true' && steps.target_scope.outputs.allowed == 'true' }}
         run: |
-          node scripts/derive-approval-context.mjs \
+          node scripts/derive-thread-teaching-context.mjs \
             --mode issue \
             --repo "${{ steps.issue.outputs.target_repo }}" \
             --issue "${{ steps.issue.outputs.number }}" \
+            --target-repo "${{ steps.issue.outputs.target_repo }}" \
+            --subject-locator "${{ steps.issue.outputs.target_repo }}#issue/${{ steps.issue.outputs.number }}" \
             --objective-fingerprint "$(jq -r '.fingerprint // empty' "$GITHUB_WORKSPACE/.artifacts/issue-triage/issue/replay-guard.json")" \
             --applies-to "issue-triage.*" \
-            --output "$GITHUB_WORKSPACE/.artifacts/issue-triage/issue/approval-context.json"
-          if [ "$(jq 'keys | length' "$GITHUB_WORKSPACE/.artifacts/issue-triage/issue/approval-context.json")" -gt 0 ]; then
-            echo "Issue approval context detected." >> "$GITHUB_STEP_SUMMARY"
-            jq -r '"- source: " + (.source // "unknown")' "$GITHUB_WORKSPACE/.artifacts/issue-triage/issue/approval-context.json" >> "$GITHUB_STEP_SUMMARY"
-            jq -r 'select(.source_url != null) | "- source_url: " + .source_url' "$GITHUB_WORKSPACE/.artifacts/issue-triage/issue/approval-context.json" >> "$GITHUB_STEP_SUMMARY"
+            --output "$GITHUB_WORKSPACE/.artifacts/issue-triage/issue/thread-teaching-context.json"
+          if [ "$(jq '.records | length' "$GITHUB_WORKSPACE/.artifacts/issue-triage/issue/thread-teaching-context.json")" -gt 0 ]; then
+            echo "Thread teaching context detected." >> "$GITHUB_STEP_SUMMARY"
+            jq -r '.records[] | "- " + .kind + ": " + .summary' "$GITHUB_WORKSPACE/.artifacts/issue-triage/issue/thread-teaching-context.json" >> "$GITHUB_STEP_SUMMARY"
           fi
 
       - name: Run issue-triage on issue
@@ -221,8 +222,8 @@ jobs:
             --issue-number "${{ steps.issue.outputs.number }}" \
             --issue-url "${{ steps.issue.outputs.url }}" \
             --objective-fingerprint "$(jq -r '.fingerprint // empty' "$GITHUB_WORKSPACE/.artifacts/issue-triage/issue/replay-guard.json")" \
-            --approval-applies-to "issue-triage.*" \
-            --approval-context-file "$GITHUB_WORKSPACE/.artifacts/issue-triage/issue/approval-context.json" \
+            --thread-teaching-applies-to "issue-triage.*" \
+            --thread-teaching-context-file "$GITHUB_WORKSPACE/.artifacts/issue-triage/issue/thread-teaching-context.json" \
             --receipt-dir "$GITHUB_WORKSPACE/.artifacts/issue-triage/issue/triage-receipts" \
             --trace-dir "$GITHUB_WORKSPACE/.artifacts/issue-triage/issue/triage-provider-trace" \
             --output "$GITHUB_WORKSPACE/.artifacts/issue-triage/issue/triage-result.json" \
@@ -550,21 +551,22 @@ jobs:
             jq -r '"- " + (.reason // "unknown")' "$GITHUB_WORKSPACE/.artifacts/issue-triage/pr/replay-guard.json" >> "$GITHUB_STEP_SUMMARY"
           fi
 
-      - name: Derive PR approval context
+      - name: Derive PR thread teaching context
         if: ${{ steps.preflight.outputs.enabled == 'true' && steps.target_scope.outputs.allowed == 'true' && steps.pr_policy.outputs.allowed == 'true' }}
         run: |
           TARGET_REPO="${{ github.event.inputs.target_repo || github.repository }}"
-          node scripts/derive-approval-context.mjs \
+          node scripts/derive-thread-teaching-context.mjs \
             --mode pr \
             --repo "$TARGET_REPO" \
             --pr "${{ github.event.inputs.pr_number || github.event.pull_request.number }}" \
+            --target-repo "$TARGET_REPO" \
+            --subject-locator "$TARGET_REPO#pr/${{ github.event.inputs.pr_number || github.event.pull_request.number }}" \
             --objective-fingerprint "$(jq -r '.head_sha' "$GITHUB_WORKSPACE/.artifacts/issue-triage/pr/pr-snapshot.json")" \
             --applies-to "issue-triage.*" \
-            --output "$GITHUB_WORKSPACE/.artifacts/issue-triage/pr/approval-context.json"
-          if [ "$(jq 'keys | length' "$GITHUB_WORKSPACE/.artifacts/issue-triage/pr/approval-context.json")" -gt 0 ]; then
-            echo "PR approval context detected." >> "$GITHUB_STEP_SUMMARY"
-            jq -r '"- source: " + (.source // "unknown")' "$GITHUB_WORKSPACE/.artifacts/issue-triage/pr/approval-context.json" >> "$GITHUB_STEP_SUMMARY"
-            jq -r 'select(.source_url != null) | "- source_url: " + .source_url' "$GITHUB_WORKSPACE/.artifacts/issue-triage/pr/approval-context.json" >> "$GITHUB_STEP_SUMMARY"
+            --output "$GITHUB_WORKSPACE/.artifacts/issue-triage/pr/thread-teaching-context.json"
+          if [ "$(jq '.records | length' "$GITHUB_WORKSPACE/.artifacts/issue-triage/pr/thread-teaching-context.json")" -gt 0 ]; then
+            echo "PR thread teaching context detected." >> "$GITHUB_STEP_SUMMARY"
+            jq -r '.records[] | "- " + .kind + ": " + .summary' "$GITHUB_WORKSPACE/.artifacts/issue-triage/pr/thread-teaching-context.json" >> "$GITHUB_STEP_SUMMARY"
           fi
 
       - name: Run issue-triage on PR
@@ -584,9 +586,9 @@ jobs:
             --target-repo "$TARGET_REPO" \
             --pr-number "${{ github.event.inputs.pr_number || github.event.pull_request.number }}" \
             --objective-fingerprint "$(jq -r '.head_sha' "$GITHUB_WORKSPACE/.artifacts/issue-triage/pr/pr-snapshot.json")" \
-            --approval-applies-to "issue-triage.*" \
+            --thread-teaching-applies-to "issue-triage.*" \
             --snapshot "$GITHUB_WORKSPACE/.artifacts/issue-triage/pr/pr-snapshot.json" \
-            --approval-context-file "$GITHUB_WORKSPACE/.artifacts/issue-triage/pr/approval-context.json" \
+            --thread-teaching-context-file "$GITHUB_WORKSPACE/.artifacts/issue-triage/pr/thread-teaching-context.json" \
             --receipt-dir "$GITHUB_WORKSPACE/.artifacts/issue-triage/pr/receipts" \
             --trace-dir "$GITHUB_WORKSPACE/.artifacts/issue-triage/pr/provider-trace" \
             --output "$GITHUB_WORKSPACE/.artifacts/issue-triage/pr/result.json" \

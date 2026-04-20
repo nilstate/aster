@@ -1,0 +1,458 @@
+spec_version: "1.1"
+task_id: "aster-thread-teaching-cutover"
+created: "2026-04-20T02:30:00Z"
+updated: "2026-04-20T04:38:00Z"
+status: "completed"
+
+task:
+  title: "Hard cut aster to thread-teaching governance and training"
+  summary: >
+    Replace the current approval-only thread-marker model with a first-class
+    thread-teaching system. GitHub issues and PR threads become the canonical
+    human-teaching layer for approvals, lessons, target norms, publish
+    authorizations, selection feedback, and memory corrections. Aster must
+    derive rebuildable repo-owned state and training rows from those records,
+    load them into runtime context, enforce live publish gates from them, and
+    remove the legacy approval-context and approved-policies cutover layer.
+  size: "large"
+  risk_level: "high"
+  context:
+    packages:
+      - ".github/workflows"
+      - ".github/ISSUE_TEMPLATE"
+      - "scripts"
+      - "docs"
+      - "spec"
+      - "state"
+    files_impacted:
+      - path: ".github/workflows/issue-triage.yml"
+        lines: "all"
+        reason: "Replace approval-context derivation with thread-teaching context derivation for live gating."
+      - path: ".github/workflows/docs-pr.yml"
+        lines: "all"
+        reason: "Require collaboration thread teaching for manual docs PR publication."
+      - path: ".github/workflows/fix-pr.yml"
+        lines: "all"
+        reason: "Require collaboration thread teaching for manual fix PR publication."
+      - path: ".github/workflows/skill-upstream.yml"
+        lines: "all"
+        reason: "Require collaboration issue publish authorization before outbound PR publication."
+      - path: "scripts/build-aster-context.mjs"
+        lines: "all"
+        reason: "Load active and derived thread-teaching context instead of approval-only state."
+      - path: "scripts/aster-core.mjs"
+        lines: "all"
+        reason: "Pass thread-teaching context and gate decision artifacts through the core lane runtime."
+      - path: "scripts/runx-agent-bridge.mjs"
+        lines: "all"
+        reason: "Resolve runx approval requests from thread-teaching gate authorizations."
+      - path: "scripts/aster-cycle.mjs"
+        lines: "all"
+        reason: "Include issue-derived teaching memory in selector context."
+      - path: "scripts/promote-aster-state.mjs"
+        lines: "all"
+        reason: "Record thread-teaching context and gate decisions in promotion packets."
+      - path: "docs/operations.md"
+        lines: "all"
+        reason: "Document the new canonical thread-teaching record grammar and gate model."
+      - path: "docs/operating-model.md"
+        lines: "all"
+        reason: "Make thread teaching the core learning and governance mechanism."
+      - path: "docs/llm-training-spec.md"
+        lines: "all"
+        reason: "Add issue-derived teaching rows as a first-class training artifact."
+      - path: "state/approved-policies.json"
+        lines: "all"
+        reason: "Remove approval-only derived state and replace it with thread-teaching state."
+    invariants:
+      - "receipts_stay_canonical"
+      - "issues_are_canonical_human_teaching_layer"
+      - "derived_memory_is_rebuildable"
+      - "no_legacy_code"
+      - "no_backward_compat_aliases"
+    related_docs:
+      - "doctrine/EPISTEMOLOGY.md"
+      - "doctrine/AUTHORITY.md"
+      - "docs/operating-model.md"
+      - "docs/operations.md"
+      - "docs/llm-training-spec.md"
+      - "docs/run-catalog.md"
+    cwd: "/home/kam/dev/aster"
+  objectives:
+    - "Replace approval-context markers with one generic thread-teaching record system."
+    - "Support record kinds for approval, lesson, target_norm, selection_feedback, publish_authorization, and memory_correction."
+    - "Derive repo-owned thread-teaching state and thread-teaching training rows from GitHub issue and PR threads."
+    - "Load both active thread-scoped thread teaching and derived thread teaching into runtime context."
+    - "Resolve runx gate approvals from thread-teaching records instead of approval-only context."
+    - "Require collaboration-issue publish authorization for docs-pr, fix-pr, and skill-upstream publication."
+    - "Feed issue-derived teaching memory into aster-cycle so issues shape future selection context."
+    - "Delete the legacy approval-only files, workflow, docs references, and state names."
+  scope:
+    in_scope:
+      - "Thread-teaching record grammar"
+      - "Thread parsing and matching"
+      - "Derived thread-teaching state"
+      - "Thread-teaching training rows"
+      - "Context builder and runx bridge cutover"
+      - "Issue-triage, docs-pr, fix-pr, and skill-upstream workflow gating"
+      - "Issue templates and operator docs"
+      - "Legacy approval-only file removal"
+    out_of_scope:
+      - "Hosted memory service changes in runx"
+      - "Non-GitHub memory providers"
+      - "Automatic issue creation for every lane"
+      - "Selector scoring policy redesign beyond feeding thread teaching into context"
+  assumptions:
+    - "GitHub issues and PR threads are the canonical human-teaching layer for aster."
+    - "Human teaching should remain visible, attributable, and rebuildable."
+    - "Outbound publication should fail closed when no publish authorization record exists."
+    - "A hard cutover is preferable to carrying legacy approval-context aliases."
+  touchpoints:
+    - area: "thread-teaching grammar"
+      description: "Introduce one record format that can express approvals, lessons, norms, and publication gates."
+      owners: ["aster"]
+    - area: "derived state"
+      description: "Persist rebuildable thread-teaching state and training rows under state/."
+      owners: ["aster"]
+    - area: "runtime context"
+      description: "Inject issue-derived teaching and active gate records into lane execution."
+      owners: ["aster"]
+    - area: "live gating"
+      description: "Require collaboration issue authorization for manual publish lanes and outbound upstream PRs."
+      owners: ["aster"]
+    - area: "training"
+      description: "Export issue-derived teaching rows as first-class training data."
+      owners: ["aster"]
+    - area: "operator UX"
+      description: "Make issue templates and docs reflect the new canonical thread-teaching model."
+      owners: ["aster"]
+  risks:
+    - description: "The cutover could leave live workflows looking for removed approval-only files."
+      impact: "high"
+      mitigation: "Update workflows, check.mjs, tests, and state file names in the same change."
+    - description: "A generic memory record grammar could become too loose and ambiguous."
+      impact: "high"
+      mitigation: "Use one explicit marker, required Kind/Summary semantics, and schema-backed training rows."
+    - description: "Manual publish workflows could become unusable if collaboration issue gating is bolted on poorly."
+      impact: "medium"
+      mitigation: "Require one collaboration issue input and fail with a clear message when publish authorization is absent."
+    - description: "Aster-cycle could ignore the new memory model and leave issue teaching disconnected from future behavior."
+      impact: "medium"
+      mitigation: "Load thread-teaching records into operator memory and include them in relevant memory lookups."
+  acceptance:
+    validation_profile: "strict"
+    definition_of_done:
+      - id: "dod1"
+        description: "Legacy approval-only scripts, workflow, docs references, and state file are removed."
+        status: "completed"
+      - id: "dod2"
+        description: "A generic thread-teaching parser and matcher exists and is covered by tests."
+        status: "completed"
+      - id: "dod3"
+        description: "Derived thread-teaching state and thread-teaching rows are emitted from GitHub thread evidence."
+        status: "completed"
+      - id: "dod4"
+        description: "Context builder and bridge resolve active and derived thread teaching rather than approval-only context."
+        status: "completed"
+      - id: "dod5"
+        description: "Issue-triage, docs-pr, fix-pr, and skill-upstream use the new thread-teaching gate model."
+        status: "completed"
+      - id: "dod6"
+        description: "Aster-cycle loads issue-derived teaching memory."
+        status: "completed"
+      - id: "dod7"
+        description: "Docs and issue templates describe the thread-teaching cutover as the canonical model."
+        status: "completed"
+    validation:
+      - id: "v1"
+        type: "compile"
+        description: "New scripts parse."
+        command: "node --check scripts/thread-teaching.mjs && node --check scripts/derive-thread-teaching-context.mjs && node --check scripts/derive-thread-teaching.mjs && node --check scripts/check-thread-teaching-gate.mjs"
+        expected: "exit code 0"
+      - id: "v2"
+        type: "test"
+        description: "Thread-teaching tests and updated runtime tests pass."
+        command: "node --test scripts/thread-teaching.test.mjs scripts/derive-thread-teaching-context.test.mjs scripts/derive-thread-teaching.test.mjs scripts/build-aster-context.test.mjs scripts/runx-agent-bridge.test.mjs scripts/change-surface-governance.test.mjs scripts/aster-cycle.test.mjs scripts/promote-aster-state.test.mjs"
+        expected: "exit code 0"
+      - id: "v3"
+        type: "test"
+        description: "Repo required-file check passes after the cutover."
+        command: "node scripts/check.mjs"
+        expected: "aster check passed"
+      - id: "v4"
+        type: "boundary"
+        description: "Workflows and spec schemas parse."
+        command: "python3 -c \"import json, yaml; json.load(open('spec/thread-teaching-row.schema.json')); [yaml.safe_load(open(p)) for p in ['.github/workflows/thread-teaching-derive.yml', '.github/workflows/issue-triage.yml', '.github/workflows/docs-pr.yml', '.github/workflows/fix-pr.yml', '.github/workflows/skill-upstream.yml']]; print('ok')\""
+        expected: "ok"
+      - id: "v5"
+        type: "boundary"
+        description: "Aster site and docs checks still pass."
+        command: "npm run site:check && npm run site:build"
+        expected: "exit code 0"
+      - id: "v6"
+        type: "boundary"
+        description: "No whitespace or patch damage in changed files."
+        command: "git diff --check"
+        expected: "exit code 0"
+  constraints:
+    approvals_required: []
+    non_goals:
+      - "No approval-context compatibility layer"
+      - "No approved-policies compatibility state"
+      - "No hidden prompt-memory shortcuts"
+      - "No publication without thread-teaching authorization"
+  notes: >
+    This is a hard cutover. The new thread-teaching system replaces approval-only
+    thread markers as the canonical human-teaching model for aster.
+
+planning_log:
+  - timestamp: "2026-04-20T02:30:00Z"
+    actor: "user"
+    summary: "Requested a thorough spec and immediate execution for a hard cutover to issue-driven memory, training, and governance."
+  - timestamp: "2026-04-20T02:30:00Z"
+    actor: "agent"
+    summary: "Started execution directly in active/ because the task is an immediate hard cutover, not a review-only draft."
+  - timestamp: "2026-04-20T03:05:00Z"
+    actor: "agent"
+    summary: "Completed the hard cutover to thread-teaching governance, runtime context, training rows, live workflow gating, and docs/templates."
+  - timestamp: "2026-04-20T04:32:00Z"
+    actor: "agent"
+    summary: >
+      Renamed the aster-local model from issue-memory to thread-teaching,
+      validated the full cutover, and tightened the boundary so runx owns
+      generic evidence projections rather than operator-specific teaching nouns.
+  - timestamp: "2026-04-20T04:38:00Z"
+    actor: "agent"
+    summary: >
+      Fixed the live collaboration path so the issue template now emits the
+      canonical thread-teaching block directly, added parser coverage for the
+      issue-form body shape, and reran the affected tests successfully.
+
+phases:
+  - id: "phase1"
+    name: "Spec And Contracts"
+    objective: "Define the cutover contract, new thread-teaching artifacts, and training schemas."
+    changes:
+      - file: ".ai/specs/active/aster-thread-teaching-cutover.yaml"
+        action: "create"
+        lines: "all"
+        content_spec: |
+          Add the executing hard-cutover spec with detailed objectives,
+          touchpoints, phases, validations, and no-compat constraints.
+      - file: "spec/thread-teaching-row.schema.json"
+        action: "create"
+        lines: "all"
+        content_spec: |
+          Create the canonical schema for one issue-derived teaching row.
+      - file: "scripts/runx-control-schemas.mjs"
+        action: "update"
+        lines: "all"
+        content_spec: |
+          Register the new thread-teaching-row schema alongside the existing
+          selector and control schemas.
+    acceptance_criteria:
+      - id: "ac1_1"
+        type: "boundary"
+        description: "The new training-row schema parses."
+        command: "python3 -c \"import json; json.load(open('spec/thread-teaching-row.schema.json')); print('ok')\""
+        expected: "ok"
+    status: "completed"
+  - id: "phase2"
+    name: "Thread Teaching Derivation"
+    objective: "Replace approval-only parsers and state with a generic thread-teaching derivation pipeline."
+    dependencies: ["phase1"]
+    changes:
+      - file: "scripts/thread-teaching.mjs"
+        action: "create"
+        lines: "all"
+        content_spec: |
+          Add the canonical marker grammar, thread loaders, record parsers,
+          matchers, and training-row helpers for thread teaching.
+      - file: "scripts/derive-thread-teaching-context.mjs"
+        action: "create"
+        lines: "all"
+        content_spec: |
+          Derive active thread-scoped thread teaching for one issue or PR.
+      - file: "scripts/derive-thread-teaching.mjs"
+        action: "create"
+        lines: "all"
+        content_spec: |
+          Build repo-owned state/thread-teaching.json and thread-teaching rows from
+          trusted issue and PR thread records.
+      - file: "state/thread-teaching.json"
+        action: "create"
+        lines: "all"
+        content_spec: |
+          Replace state/approved-policies.json with the new thread-teaching state file.
+      - file: "scripts/derive-approval-context.mjs"
+        action: "delete"
+        lines: "all"
+        content_spec: "Remove the approval-only thread parser."
+      - file: "scripts/derive-approved-policies.mjs"
+        action: "delete"
+        lines: "all"
+        content_spec: "Remove the approval-only derived-state builder."
+      - file: "state/approved-policies.json"
+        action: "delete"
+        lines: "all"
+        content_spec: "Remove the approval-only state file."
+    acceptance_criteria:
+      - id: "ac2_1"
+        type: "test"
+        description: "Thread-teaching parser and derivation tests pass."
+        command: "node --test scripts/thread-teaching.test.mjs scripts/derive-thread-teaching-context.test.mjs scripts/derive-thread-teaching.test.mjs"
+        expected: "exit code 0"
+    status: "completed"
+  - id: "phase3"
+    name: "Runtime Cutover"
+    objective: "Feed thread teaching through context assembly, gate resolution, promotions, and selector memory."
+    dependencies: ["phase2"]
+    changes:
+      - file: "scripts/build-aster-context.mjs"
+        action: "update"
+        lines: "all"
+        content_spec: |
+          Replace approval-context inputs with active thread-teaching context and
+          derived thread-teaching matches.
+      - file: "scripts/aster-core.mjs"
+        action: "update"
+        lines: "all"
+        content_spec: |
+          Write thread-teaching context and gate-decision artifacts instead of
+          approval-context files.
+      - file: "scripts/runx-agent-bridge.mjs"
+        action: "update"
+        lines: "all"
+        content_spec: |
+          Resolve runx approval requests from thread-teaching gate authorizations
+          and emit gate-decision records.
+      - file: "scripts/promote-aster-state.mjs"
+        action: "update"
+        lines: "all"
+        content_spec: |
+          Record thread-teaching context and gate decisions in promotion packets.
+      - file: "scripts/aster-cycle.mjs"
+        action: "update"
+        lines: "all"
+        content_spec: |
+          Load issue-derived teaching memory into operator memory lookups.
+    acceptance_criteria:
+      - id: "ac3_1"
+        type: "test"
+        description: "Updated runtime and selector tests pass."
+        command: "node --test scripts/build-aster-context.test.mjs scripts/runx-agent-bridge.test.mjs scripts/promote-aster-state.test.mjs scripts/aster-cycle.test.mjs"
+        expected: "exit code 0"
+    status: "completed"
+  - id: "phase4"
+    name: "Workflow And Template Cutover"
+    objective: "Make live lanes and issue templates use the new thread-teaching model."
+    dependencies: ["phase3"]
+    changes:
+      - file: ".github/workflows/thread-teaching-derive.yml"
+        action: "create"
+        lines: "all"
+        content_spec: |
+          Replace approval-policy-derive with a thread-teaching derive workflow.
+      - file: ".github/workflows/issue-triage.yml"
+        action: "update"
+        lines: "all"
+        content_spec: |
+          Derive active thread-teaching context for the live issue/PR thread.
+      - file: ".github/workflows/docs-pr.yml"
+        action: "update"
+        lines: "all"
+        content_spec: |
+          Require collaboration issue input, derive thread-teaching context, and
+          enforce docs-pr.publish authorization from that issue.
+      - file: ".github/workflows/fix-pr.yml"
+        action: "update"
+        lines: "all"
+        content_spec: |
+          Require collaboration issue input, derive thread-teaching context, and
+          enforce fix-pr.publish authorization from that issue.
+      - file: ".github/workflows/skill-upstream.yml"
+        action: "update"
+        lines: "all"
+        content_spec: |
+          Require collaboration issue input and publish authorization before
+          outbound upstream PR publication.
+      - file: ".github/workflows/approval-policy-derive.yml"
+        action: "delete"
+        lines: "all"
+        content_spec: "Remove the approval-only derive workflow."
+      - file: ".github/ISSUE_TEMPLATE/collaboration.yml"
+        action: "create"
+        lines: "all"
+        content_spec: |
+          Add a collaboration issue template for memory-backed publication and
+          teaching threads.
+    acceptance_criteria:
+      - id: "ac4_1"
+        type: "boundary"
+        description: "The workflow YAML files parse after the cutover."
+        command: "python3 -c \"import yaml; [yaml.safe_load(open(p)) for p in ['.github/workflows/thread-teaching-derive.yml', '.github/workflows/issue-triage.yml', '.github/workflows/docs-pr.yml', '.github/workflows/fix-pr.yml', '.github/workflows/skill-upstream.yml']]; print('ok')\""
+        expected: "ok"
+    status: "completed"
+  - id: "phase5"
+    name: "Docs And Validation"
+    objective: "Make the thread-teaching model the documented and checked canonical operating model."
+    dependencies: ["phase4"]
+    changes:
+      - file: "docs/operations.md"
+        action: "update"
+        lines: "all"
+        content_spec: |
+          Replace approval-only guidance with the generic thread-teaching record
+          grammar and explain publication gating from collaboration issues.
+      - file: "docs/operating-model.md"
+        action: "update"
+        lines: "all"
+        content_spec: |
+          Make issues the canonical human-teaching layer and explain how they
+          compile into state and training rows.
+      - file: "docs/llm-training-spec.md"
+        action: "update"
+        lines: "all"
+        content_spec: |
+          Add thread-teaching rows and explain how issue responses become
+          durable training data for aster.
+      - file: "docs/flows.md"
+        action: "update"
+        lines: "all"
+        content_spec: |
+          Document thread-teaching-gated flow changes for issue-triage, docs-pr,
+          fix-pr, and skill-upstream.
+      - file: "docs/run-catalog.md"
+        action: "update"
+        lines: "all"
+        content_spec: |
+          Update live lane descriptions to reference thread-teaching gating and
+          collaboration issue authorization.
+      - file: "docs/skill-upstream.md"
+        action: "update"
+        lines: "all"
+        content_spec: |
+          Document the collaboration-issue publish gate as mandatory for
+          outbound upstream PR publication.
+      - file: "scripts/check.mjs"
+        action: "update"
+        lines: "all"
+        content_spec: |
+          Replace required-file references for approval-only files with the new
+          thread-teaching files and workflow names.
+    acceptance_criteria:
+      - id: "ac5_1"
+        type: "test"
+        description: "Repo checks and site checks pass."
+        command: "node scripts/check.mjs && npm run site:check && npm run site:build"
+        expected: "exit code 0"
+    status: "completed"
+
+rollback:
+  strategy: "per_phase"
+  commands:
+    phase1: "git checkout HEAD -- .ai/specs/active/aster-thread-teaching-cutover.yaml spec/thread-teaching-row.schema.json scripts/runx-control-schemas.mjs"
+    phase2: "git checkout HEAD -- scripts/thread-teaching.mjs scripts/derive-thread-teaching-context.mjs scripts/derive-thread-teaching.mjs state/thread-teaching.json scripts/derive-approval-context.mjs scripts/derive-approved-policies.mjs state/approved-policies.json"
+    phase3: "git checkout HEAD -- scripts/build-aster-context.mjs scripts/aster-core.mjs scripts/runx-agent-bridge.mjs scripts/promote-aster-state.mjs scripts/aster-cycle.mjs"
+    phase4: "git checkout HEAD -- .github/workflows/thread-teaching-derive.yml .github/workflows/issue-triage.yml .github/workflows/docs-pr.yml .github/workflows/fix-pr.yml .github/workflows/skill-upstream.yml .github/workflows/approval-policy-derive.yml .github/ISSUE_TEMPLATE/collaboration.yml"
+    phase5: "git checkout HEAD -- docs/operations.md docs/operating-model.md docs/llm-training-spec.md docs/flows.md docs/run-catalog.md docs/skill-upstream.md scripts/check.mjs"

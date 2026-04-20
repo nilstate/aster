@@ -34,6 +34,15 @@ on:
         required: true
         default: false
         type: boolean
+      collaboration_repo:
+        description: Repo that holds the approval and teaching issue.
+        required: false
+        default: nilstate/aster
+        type: string
+      collaboration_issue:
+        description: Issue number containing the thread-teaching publish authorization.
+        required: false
+        type: string
       force:
         description: Overwrite an existing SKILL.md in the target checkout
         required: true
@@ -111,6 +120,26 @@ jobs:
             --artifacts-dir .artifacts/skill-upstream \
             > .artifacts/skill-upstream.validate.json
           cat .artifacts/skill-upstream.validate.json
+
+      - name: Check collaboration issue authorization
+        if: ${{ inputs.publish }}
+        run: |
+          if [ -z "${{ inputs.collaboration_issue }}" ]; then
+            echo "collaboration_issue is required when publish=true" >&2
+            exit 1
+          fi
+          gh issue view "${{ inputs.collaboration_issue }}" \
+            --repo "${{ inputs.collaboration_repo }}" \
+            --json url \
+            > .artifacts/skill-upstream/collaboration-issue.json
+          node scripts/check-thread-teaching-gate.mjs \
+            --repo "${{ inputs.collaboration_repo }}" \
+            --issue "${{ inputs.collaboration_issue }}" \
+            --target-repo "${{ inputs.target_repo }}" \
+            --subject-locator "${{ inputs.target_repo }}" \
+            --applies-to "skill-upstream.publish" \
+            --output .artifacts/skill-upstream/thread-teaching-gate.json
+          jq -e '.allowed == true' .artifacts/skill-upstream/thread-teaching-gate.json > /dev/null
 
       - name: Publish draft PR
         if: ${{ inputs.publish }}

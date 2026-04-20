@@ -30,14 +30,14 @@ export async function runAsterCore(options) {
   const contextPromptPath = path.resolve(options.contextPrompt ?? path.join(artifactRoot, "context.md"));
   const promotionsDir = path.resolve(options.promotionsDir ?? path.join(artifactRoot, "promotions"));
   const summaryPath = path.resolve(options.summaryOutput ?? path.join(artifactRoot, "core-summary.json"));
-  const approvalContextPath = path.resolve(options.approvalContextJson ?? path.join(artifactRoot, "approval-context.json"));
-  const approvalDecisionsPath = path.resolve(options.approvalDecisions ?? path.join(receiptDir, "approval-decisions.json"));
+  const threadTeachingContextPath = path.resolve(options.threadTeachingContextJson ?? path.join(artifactRoot, "thread-teaching-context.json"));
+  const gateDecisionsPath = path.resolve(options.gateDecisions ?? path.join(receiptDir, "gate-decisions.json"));
 
   await mkdir(artifactRoot, { recursive: true });
   await mkdir(receiptDir, { recursive: true });
   await mkdir(traceDir, { recursive: true });
   await mkdir(promotionsDir, { recursive: true });
-  await rm(approvalDecisionsPath, { force: true });
+  await rm(gateDecisionsPath, { force: true });
 
   const contextBundle = await buildContextBundle({
     repoRoot,
@@ -51,15 +51,11 @@ export async function runAsterCore(options) {
     prNumber: options.prNumber,
     issueUrl: options.issueUrl,
     snapshot: options.snapshot,
-    approvalContextFile: options.approvalContextFile,
-    approvalSource: options.approvalSource,
-    approvalSourceUrl: options.approvalSourceUrl,
-    approvalRationale: options.approvalRationale,
-    approvalNotes: options.approvalNotes,
-    approvalInvariants: options.approvalInvariants,
-    approvedBy: options.approvedBy,
+    threadTeachingContextFile: options.threadTeachingContextFile,
     objectiveFingerprint: options.objectiveFingerprint,
-    approvalAppliesTo: options.approvalAppliesTo,
+    threadTeachingRecordKinds: options.threadTeachingRecordKinds,
+    threadTeachingLabels: options.threadTeachingLabels,
+    threadTeachingAppliesTo: options.threadTeachingAppliesTo,
     now: options.now,
     maxHistory: options.maxHistory,
     maxReflections: options.maxReflections,
@@ -67,8 +63,8 @@ export async function runAsterCore(options) {
   });
   await writeFile(contextJsonPath, `${JSON.stringify(contextBundle, null, 2)}\n`);
   await writeFile(contextPromptPath, `${renderContextPrompt(contextBundle)}\n`);
-  if (contextBundle.approval_context) {
-    await writeFile(approvalContextPath, `${JSON.stringify(contextBundle.approval_context, null, 2)}\n`);
+  if (contextBundle.thread_teaching_context) {
+    await writeFile(threadTeachingContextPath, `${JSON.stringify(contextBundle.thread_teaching_context, null, 2)}\n`);
   }
 
   const bridgeArgs = buildBridgeArgs({
@@ -79,8 +75,8 @@ export async function runAsterCore(options) {
     traceDir,
     outputPath,
     contextPromptPath,
-    approvalContextPath: contextBundle.approval_context ? approvalContextPath : undefined,
-    approvalDecisionsPath,
+    threadTeachingContextPath: contextBundle.thread_teaching_context ? threadTeachingContextPath : undefined,
+    gateDecisionsPath,
     approve: options.approve,
     approveAll: options.approveAll,
     model: options.model,
@@ -106,8 +102,8 @@ export async function runAsterCore(options) {
   }
 
   const runResult = JSON.parse(await readFile(outputPath, "utf8"));
-  if (existsSync(approvalDecisionsPath)) {
-    contextBundle.approval_decisions = JSON.parse(await readFile(approvalDecisionsPath, "utf8"));
+  if (existsSync(gateDecisionsPath)) {
+    contextBundle.gate_decisions = JSON.parse(await readFile(gateDecisionsPath, "utf8"));
   }
   const drafts = buildPromotionDrafts({
     lane: options.lane,
@@ -125,8 +121,8 @@ export async function runAsterCore(options) {
     result_path: outputPath,
     context_json_path: contextJsonPath,
     context_prompt_path: contextPromptPath,
-    approval_context_path: contextBundle.approval_context ? approvalContextPath : null,
-    approval_decisions_path: existsSync(approvalDecisionsPath) ? approvalDecisionsPath : null,
+    thread_teaching_context_path: contextBundle.thread_teaching_context ? threadTeachingContextPath : null,
+    gate_decisions_path: existsSync(gateDecisionsPath) ? gateDecisionsPath : null,
     receipt_dir: receiptDir,
     trace_dir: traceDir,
     promotion_outputs: promotionOutputs,
@@ -147,8 +143,8 @@ export function buildBridgeArgs({
   traceDir,
   outputPath,
   contextPromptPath,
-  approvalContextPath,
-  approvalDecisionsPath,
+  threadTeachingContextPath,
+  gateDecisionsPath,
   approve = [],
   approveAll = false,
   model,
@@ -170,11 +166,11 @@ export function buildBridgeArgs({
     "--context-file",
     path.resolve(contextPromptPath),
   ];
-  if (approvalContextPath) {
-    args.push("--approval-context", path.resolve(approvalContextPath));
+  if (threadTeachingContextPath) {
+    args.push("--thread-teaching-context", path.resolve(threadTeachingContextPath));
   }
-  if (approvalDecisionsPath) {
-    args.push("--approval-decisions", path.resolve(approvalDecisionsPath));
+  if (gateDecisionsPath) {
+    args.push("--gate-decisions", path.resolve(gateDecisionsPath));
   }
 
   if (workdir) {
@@ -205,9 +201,9 @@ export function buildBridgeArgs({
 function parseArgs(argv) {
   const options = {
     approve: [],
-    approvalNotes: [],
-    approvalInvariants: [],
-    approvalAppliesTo: [],
+    threadTeachingRecordKinds: [],
+    threadTeachingLabels: [],
+    threadTeachingAppliesTo: [],
     runxArgs: [],
   };
 
@@ -261,16 +257,16 @@ function parseArgs(argv) {
       options.contextPrompt = requireValue(argv, ++index, token);
       continue;
     }
-    if (token === "--approval-context-json") {
-      options.approvalContextJson = requireValue(argv, ++index, token);
+    if (token === "--thread-teaching-context-json") {
+      options.threadTeachingContextJson = requireValue(argv, ++index, token);
       continue;
     }
-    if (token === "--approval-context-file") {
-      options.approvalContextFile = requireValue(argv, ++index, token);
+    if (token === "--thread-teaching-context-file") {
+      options.threadTeachingContextFile = requireValue(argv, ++index, token);
       continue;
     }
-    if (token === "--approval-decisions") {
-      options.approvalDecisions = requireValue(argv, ++index, token);
+    if (token === "--gate-decisions") {
+      options.gateDecisions = requireValue(argv, ++index, token);
       continue;
     }
     if (token === "--lane") {
@@ -305,36 +301,20 @@ function parseArgs(argv) {
       options.issueUrl = requireValue(argv, ++index, token);
       continue;
     }
-    if (token === "--approval-source") {
-      options.approvalSource = requireValue(argv, ++index, token);
+    if (token === "--thread-teaching-record-kind") {
+      options.threadTeachingRecordKinds.push(requireValue(argv, ++index, token));
       continue;
     }
-    if (token === "--approval-source-url") {
-      options.approvalSourceUrl = requireValue(argv, ++index, token);
-      continue;
-    }
-    if (token === "--approval-rationale") {
-      options.approvalRationale = requireValue(argv, ++index, token);
-      continue;
-    }
-    if (token === "--approval-note") {
-      options.approvalNotes.push(requireValue(argv, ++index, token));
-      continue;
-    }
-    if (token === "--approval-invariant") {
-      options.approvalInvariants.push(requireValue(argv, ++index, token));
-      continue;
-    }
-    if (token === "--approved-by") {
-      options.approvedBy = requireValue(argv, ++index, token);
+    if (token === "--thread-teaching-label") {
+      options.threadTeachingLabels.push(requireValue(argv, ++index, token));
       continue;
     }
     if (token === "--objective-fingerprint") {
       options.objectiveFingerprint = requireValue(argv, ++index, token);
       continue;
     }
-    if (token === "--approval-applies-to") {
-      options.approvalAppliesTo.push(requireValue(argv, ++index, token));
+    if (token === "--thread-teaching-applies-to") {
+      options.threadTeachingAppliesTo.push(requireValue(argv, ++index, token));
       continue;
     }
     if (token === "--now") {

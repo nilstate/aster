@@ -50,6 +50,9 @@ test("buildLanePrBody includes lane guardrails and validation", () => {
     requestBody: "Tighten the Pages deployment explanation.",
     sourceId: "docs-pr-101",
     sourceUrl: "https://github.com/nilstate/aster/issues/101",
+    collaborationRepo: "nilstate/aster",
+    collaborationIssue: "222",
+    collaborationIssueUrl: "https://github.com/nilstate/aster/issues/222",
     targetRepo: "nilstate/aster",
     taskId: "docs-pr-clarify-deploy-docs",
     verificationProfile: "aster.site-ci",
@@ -59,5 +62,6 @@ test("buildLanePrBody includes lane guardrails and validation", () => {
   assert.match(body, /This draft PR was opened by the `aster` docs-pr lane/);
   assert.match(body, /verification profile: `aster\.site-ci`/);
   assert.match(body, /`npm run site:ci`/);
+  assert.match(body, /Collaboration issue: `nilstate\/aster#222`/);
   assert.match(body, /Lane Guardrails/);
 });

@@ -27,5 +27,5 @@ body:
     id: safety
     attributes:
       label: Safety Constraints
-      description: What must stay out of scope or approval-gated?
+      description: What must stay out of scope or thread-teaching-gated?
       placeholder: No secret handling changes. Keep the change docs-only.

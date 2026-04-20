@@ -16,11 +16,12 @@ This is the live run catalog for `aster`.
   5. draft PR publication per worker
 - PR command: `runx skill <runx>/skills/github-triage --runner respond`
 - purpose: make issue and PR routing public before mutation, start bounded
-  workers only after the triage gate approves build, keep PR review legible,
+  workers only after thread teaching authorizes build, keep PR review legible,
   and dedupe repeated issue or PR events before public output
 - output: triage comment, triage decision artifact, optional archived scafld
   specs, changed repo files, receipts, draft PRs, issue backlink comments,
-  posted PR comments, comment evals, and generated-PR evals
+  posted PR comments, comment evals, generated-PR evals, and active
+  thread-teaching context
 
 ### `skill-lab`
 
@@ -36,6 +37,7 @@ This is the live run catalog for `aster`.
 - command: `node scripts/run-governed-pr-lane.mjs --lane fix-pr`
 - purpose: turn one bounded bugfix request into a validated draft `runx/*` PR
   outside issue-triage worker fanout
+- gate: requires a collaboration issue authorizing `fix-pr.publish`
 - output: normalized request packet, verification report, receipts, draft PR,
   generated-PR eval, change-surface policy
 
@@ -45,6 +47,7 @@ This is the live run catalog for `aster`.
 - command: `node scripts/run-governed-pr-lane.mjs --lane docs-pr`
 - purpose: turn one bounded docs or explanation request into a validated draft
   `runx/*` PR while constraining the mutation to docs-only scope
+- gate: requires a collaboration issue authorizing `docs-pr.publish`
 - output: normalized request packet, verification report, receipts, draft PR,
   generated-PR eval, change-surface policy
 
@@ -55,6 +58,7 @@ This is the live run catalog for `aster`.
   `node scripts/validate-skill-upstream.mjs`
 - purpose: add a portable upstream `SKILL.md` to a target repo without adding
   runx-specific binding files
+- gate: requires a collaboration issue authorizing `skill-upstream.publish`
 - first target: `nilstate/icey-cli`
 - output: target `SKILL.md`, contribution artifact packet, PR body, optional
   draft PR, public evidence row

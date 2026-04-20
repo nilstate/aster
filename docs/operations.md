@@ -1,6 +1,6 @@
 ---
 title: Operations
-description: Secrets, approvals, artifacts, and what still needs hardening.
+description: Secrets, thread teaching, artifacts, and what still needs hardening.
 ---
 
 # Operations
@@ -67,63 +67,74 @@ Minimal disclosure is allowed only when it is materially useful, for example:
 
 - `Drafted with tooling, reviewed by Kam.`
 
-## Approval policy
+## Thread Teaching Policy
 
-Approvals stay explicit:
+Thread teaching is the canonical human-teaching layer:
 
-- Issue-triage comments first; `objective-decompose` may run when the
-  triage gate approves planning, and one or more repo-scoped `issue-to-pr`
-  workers start only after the triage gate approves build
+- `issue-triage` comments first; `objective-decompose` may run when thread
+  memory authorizes planning, and repo-scoped `issue-to-pr` workers start only
+  when thread memory authorizes bounded build work
 - issue and PR replay guards block duplicate reruns before public comments are
   regenerated or reposted
 - public comment quality must clear the Kam-voice bar before posting
 - issue triage writes comments only through the dedicated workflow
-- when a human narrows a gate with rationale or invariants, that context should
-  be captured as canonical approval evidence and only then reflected into
-  derived memory or prompt context
-- Skill-lab opens draft PRs only
-- Skill-upstream opens draft PRs only, and upstream changes are limited to
-  portable `SKILL.md` unless a maintainer explicitly requests more
+- docs PRs, fix PRs, and upstream skill publication require a collaboration
+  issue with explicit publish authorization in thread memory
+- skill-lab opens draft PRs only
+- skill-upstream opens draft PRs only, and upstream changes stay limited to
+  portable `SKILL.md` unless a maintainer explicitly authorizes more
 - generated PR policy enforcement keeps `runx/*` PRs draft-only and explicitly
   human-reviewed
-- Merge-watch is read-only against upstream repos. It records PR
-  state, checks, merge commit, and upstream blob metadata, then emits an
-  internal registry-binding request after merge.
+- merge-watch is read-only against upstream repos. It records PR state, checks,
+  merge commit, and upstream blob metadata, then emits an internal
+  registry-binding request after merge
 
-### Maintainer approval context
+### Maintainer Thread Teaching Record
 
-When a maintainer wants to narrow a future approval gate without adding hidden
-prompt sprawl, the guidance should live in the issue or PR thread itself using
-an explicit marker block:
+When a maintainer wants to teach or authorize future work without hiding that
+guidance in prompt sprawl, the instruction should live in the issue or PR
+thread itself. The collaboration issue template now emits this canonical block
+directly so the live gate can read it without a second manual formatting step:
 
 ```md
-<!-- aster:approval-context -->
-Rationale: Keep this bounded to triage and planning only.
-Approved By: kam
-Applies To: issue-triage.plan, issue-triage.build
+<!-- aster:thread-teaching-record -->
+Kind: publish_authorization
+Summary: One bounded docs PR may be published for this repo.
+Recorded By: kam
+Target Repo: nilstate/runx
+Subject Locator: nilstate/runx
 Objective Fingerprint: issue:runx-42
-Expires After: 2026-05-01T00:00:00Z
-Invariant: Do not open or update a PR until build is explicitly approved.
-Notes:
-- Reuse this only for the same repo-scoped objective.
-- Quote the approval rationale back in the receipt summary.
+Applies To: docs-pr.publish
+Invariant: Keep the change docs-only.
+Note: Reuse this only for the same repo-scoped objective.
+Decision: docs-pr.publish = allow | draft publication is approved
 ```
+
+Supported `Kind` values:
+
+- `approval`
+- `lesson`
+- `target_norm`
+- `selection_feedback`
+- `publish_authorization`
+- `memory_correction`
 
 Rules:
 
 - only trusted maintainer authorships count: `OWNER`, `MEMBER`, or
   `COLLABORATOR`
-- the latest trusted marker block wins for that thread
-- `Applies To` scopes the approval to one or more gate ids or wildcard patterns
-  such as `issue-triage.*`
-- `Objective Fingerprint` narrows the approval to one concrete issue/PR objective
-- `Expires After` lets old approvals fail closed instead of lingering forever
-- the thread comment is canonical evidence; any derived memory or prompt context
+- the thread comment is canonical evidence; derived memory and runtime context
   must be rebuildable from it
-- if no trusted marker exists, the lane should behave as though no approval
-  context was supplied
-- `state/approved-policies.json` is a derived cache built from those thread
-  markers; it is helpful memory, not a hidden source of authority
+- `Applies To` scopes a record to one or more gate ids or wildcard patterns
+  such as `issue-triage.*`
+- `Decision` captures explicit allow or deny outcomes for concrete gates
+- `Objective Fingerprint` narrows a record to one concrete issue or PR objective
+- `Expires After` lets old teaching fail closed instead of lingering forever
+- `memory_correction` can supersede earlier record ids without mutating history
+- if no trusted record exists, the lane behaves as though no thread teaching was
+  supplied
+- `state/thread-teaching.json` is a rebuildable cache for runtime context and
+  training, not a hidden source of authority
 
 ## Artifact policy
 

@@ -24,8 +24,10 @@ an LLM or training pipeline should learn against.
 Canonical machine-readable control state lives in:
 
 - `state/aster-control.json`
+- `state/thread-teaching.json`
 - `spec/aster-control.schema.json`
 - `spec/selector-training-row.schema.json`
+- `spec/thread-teaching-row.schema.json`
 
 These schemas are repo-local on purpose. They are not part of the public
 `runx` protocol surface.
@@ -38,9 +40,9 @@ The minimum durable objects are:
 - `ReflectionEntry`
 - `CycleRecord`
 
-`receipts`, `verification-report.json`, `grant` objects, and approvals remain
-the higher-trust evidence layer. `aster-control.json` is a learned projection
-over that evidence, not a replacement for it.
+`receipts`, `verification-report.json`, `grant` objects, and thread-teaching
+records remain the higher-trust evidence layer. `aster-control.json` is a
+learned projection over that evidence, not a replacement for it.
 
 ## Opportunity labels
 
@@ -209,6 +211,22 @@ Current emitter:
 ```bash
 node scripts/aster-cycle.mjs --training-output .artifacts/aster/selector-training-row.json
 ```
+
+## Issue teaching row
+
+The canonical labeled export for one thread-teaching record is:
+
+- `spec/thread-teaching-row.schema.json`
+
+The rows live inside `state/thread-teaching.json` under `teaching_rows`.
+
+They are derived from trusted issue and PR thread records and are intended to
+teach:
+
+- gate authorization decisions
+- target-specific norms
+- reusable maintainer lessons
+- corrections to earlier human guidance
 
 ## Public-surface contract
 

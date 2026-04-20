@@ -11,8 +11,8 @@ test("buildBridgeArgs forwards context and approvals to the shared bridge", () =
     traceDir: "/artifacts/trace",
     outputPath: "/artifacts/result.json",
     contextPromptPath: "/artifacts/context.md",
-    approvalContextPath: "/artifacts/approval-context.json",
-    approvalDecisionsPath: "/artifacts/receipts/approval-decisions.json",
+    threadTeachingContextPath: "/artifacts/thread-teaching-context.json",
+    gateDecisionsPath: "/artifacts/receipts/gate-decisions.json",
     approve: ["gate.alpha"],
     runxArgs: ["skill", "/runx/skills/support-triage"],
   });
@@ -29,10 +29,10 @@ test("buildBridgeArgs forwards context and approvals to the shared bridge", () =
     "/artifacts/result.json",
     "--context-file",
     "/artifacts/context.md",
-    "--approval-context",
-    "/artifacts/approval-context.json",
-    "--approval-decisions",
-    "/artifacts/receipts/approval-decisions.json",
+    "--thread-teaching-context",
+    "/artifacts/thread-teaching-context.json",
+    "--gate-decisions",
+    "/artifacts/receipts/gate-decisions.json",
   ]);
   assert.ok(args.includes("--approve"));
   assert.ok(args.includes("gate.alpha"));

@@ -790,9 +790,11 @@ async function loadOpenOperatorMemoryBranches(repo) {
 }
 
 async function loadOperatorMemory(repoRoot) {
+  const threadTeachingState = await readOptionalJson(path.join(repoRoot, "state", "thread-teaching.json"));
   return {
     history: await loadMarkdownMemory(path.join(repoRoot, "history"), repoRoot),
     reflections: await loadMarkdownMemory(path.join(repoRoot, "reflections"), repoRoot),
+    thread_teaching: Array.isArray(threadTeachingState?.records) ? threadTeachingState.records : [],
   };
 }
 
@@ -825,6 +827,13 @@ async function loadMarkdownMemory(dirPath, repoRoot) {
     });
   }
   return docs;
+}
+
+async function readOptionalJson(filePath) {
+  if (!existsSync(filePath)) {
+    return null;
+  }
+  return JSON.parse(await readFile(filePath, "utf8"));
 }
 
 function buildMaintenanceOpportunity({ lane, repo, dossiers, memory, now, title }) {
@@ -1540,7 +1549,7 @@ function ageDays(now, value) {
 }
 
 function findRelevantMemory(memory, subjectLocator, targetRepo, lane) {
-  return [...memory.history, ...memory.reflections].filter((entry) => {
+  const markdownMemory = [...memory.history, ...memory.reflections].filter((entry) => {
     if (entry.subject_locator && entry.subject_locator === subjectLocator) {
       return true;
     }
@@ -1549,6 +1558,20 @@ function findRelevantMemory(memory, subjectLocator, targetRepo, lane) {
     }
     return false;
   });
+  const threadTeaching = (memory.thread_teaching ?? []).filter((entry) => {
+    const record = entry?.thread_teaching_record ?? entry;
+    if (record?.subject_locator && record.subject_locator === subjectLocator) {
+      return true;
+    }
+    if (record?.target_repo && record.target_repo === targetRepo) {
+      return true;
+    }
+    if (Array.isArray(record?.applies_to) && record.applies_to.includes(lane)) {
+      return true;
+    }
+    return false;
+  });
+  return [...markdownMemory, ...threadTeaching];
 }
 
 function findLatestLaneDate(memory, lane) {

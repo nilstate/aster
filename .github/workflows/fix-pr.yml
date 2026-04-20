@@ -19,6 +19,15 @@ on:
         description: Context and constraints for the fix.
         required: true
         type: string
+      collaboration_repo:
+        description: Repo that holds the approval and teaching issue.
+        required: true
+        default: nilstate/aster
+        type: string
+      collaboration_issue:
+        description: Issue number containing the thread-teaching authorization.
+        required: true
+        type: string
       source_id:
         description: Optional source identifier.
         required: false
@@ -102,6 +111,24 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
+      - name: Check collaboration issue authorization
+        if: ${{ steps.preflight.outputs.enabled == 'true' }}
+        run: |
+          mkdir -p .artifacts/fix-pr
+          gh issue view "${{ inputs.collaboration_issue }}" \
+            --repo "${{ inputs.collaboration_repo }}" \
+            --json url \
+            > .artifacts/fix-pr/collaboration-issue.json
+          node scripts/check-thread-teaching-gate.mjs \
+            --repo "${{ inputs.collaboration_repo }}" \
+            --issue "${{ inputs.collaboration_issue }}" \
+            --target-repo "${{ inputs.target_repo }}" \
+            --subject-locator "${{ inputs.target_repo }}" \
+            --applies-to "fix-pr.publish" \
+            --output .artifacts/fix-pr/thread-teaching-gate.json
+          jq -e '.allowed == true' .artifacts/fix-pr/thread-teaching-gate.json > /dev/null
+          jq '.context' .artifacts/fix-pr/thread-teaching-gate.json > .artifacts/fix-pr/thread-teaching-context.json
+
       - name: Run fix-pr lane
         if: ${{ steps.preflight.outputs.enabled == 'true' }}
         run: |
@@ -113,6 +140,10 @@ jobs:
             --target-repo "${{ inputs.target_repo }}"
             --request-title "${{ inputs.title }}"
             --request-body "${{ inputs.body }}"
+            --collaboration-repo "${{ inputs.collaboration_repo }}"
+            --collaboration-issue "${{ inputs.collaboration_issue }}"
+            --collaboration-issue-url "$(jq -r '.url' .artifacts/fix-pr/collaboration-issue.json)"
+            --thread-teaching-context-file "$GITHUB_WORKSPACE/.artifacts/fix-pr/thread-teaching-context.json"
             --artifact-root "$GITHUB_WORKSPACE/.artifacts/fix-pr"
             --work-root "$GITHUB_WORKSPACE/.artifacts/fix-pr-workspaces"
             --scafld-bin "$HOME/.local/bin/scafld"

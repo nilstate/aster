@@ -64,13 +64,13 @@ test("evaluateLaneChangeSurfacePolicy allows issue-triage operator-memory surfac
   assert.deepEqual(policy.blocked_surfaces, []);
 });
 
-test("evaluateLaneChangeSurfacePolicy allows approval-policy-derive to refresh learned state only", () => {
+test("evaluateLaneChangeSurfacePolicy allows thread-teaching-derive to refresh learned state only", () => {
   const policy = evaluateLaneChangeSurfacePolicy({
-    lane: "approval-policy-derive",
+    lane: "thread-teaching-derive",
     repo: "nilstate/aster",
     ownerRepo: "nilstate/aster",
     files: [
-      "state/approved-policies.json",
+      "state/thread-teaching.json",
       "README.md",
     ],
   });

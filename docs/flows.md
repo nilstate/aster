@@ -20,7 +20,9 @@ This lane has two entry modes:
    starts isolated `issue-to-pr` workers only when thread teaching
    authorizes bounded build work. Replay guard blocks duplicate reruns for the
    same issue fingerprint, and the live issue or PR thread is also parsed for
-   reusable lessons, norms, and explicit gate authorizations
+   reusable lessons, norms, and explicit gate authorizations. Canonical
+   collaboration/thread-teaching issues are recognized as approval records and
+   skipped before objective triage begins
 2. PR mode builds a live PR snapshot, runs it through `github-triage`, and
    posts a maintainer comment back to the PR. Public-value and replay gates
    block low-signal or duplicate comments for the same head SHA

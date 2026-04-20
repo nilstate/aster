@@ -80,6 +80,9 @@ Thread teaching is the canonical human-teaching layer:
 - issue triage writes comments only through the dedicated workflow
 - docs PRs, fix PRs, and upstream skill publication require a collaboration
   issue with explicit publish authorization in thread memory
+- collaboration issues that already contain a canonical thread-teaching record
+  are treated as approval evidence, not as fresh objective-triage work; malformed
+  collaboration issues are held for repair instead of spawning memory PRs
 - skill-lab opens draft PRs only
 - skill-upstream opens draft PRs only, and upstream changes stay limited to
   portable `SKILL.md` unless a maintainer explicitly authorizes more

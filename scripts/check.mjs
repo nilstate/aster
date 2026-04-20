@@ -73,6 +73,8 @@ const required = [
   "scripts/check-issue-triage-pr-policy.mjs",
   "scripts/check-issue-triage-pr-policy.test.mjs",
   "scripts/check-thread-teaching-gate.mjs",
+  "scripts/classify-issue-envelope.mjs",
+  "scripts/classify-issue-envelope.test.mjs",
   "scripts/apply-aster-promotions.mjs",
   "scripts/apply-aster-promotions.test.mjs",
   "scripts/aster-core.mjs",

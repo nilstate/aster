@@ -148,8 +148,28 @@ jobs:
           echo "EOF" >> "$GITHUB_OUTPUT"
           echo "url=$(jq -r '.url' .artifacts/issue-triage/issue/issue.json)" >> "$GITHUB_OUTPUT"
 
-      - name: Enforce prerelease target scope
+      - name: Classify issue envelope
         if: ${{ steps.preflight.outputs.enabled == 'true' }}
+        id: issue_mode
+        run: |
+          node scripts/classify-issue-envelope.mjs \
+            --input .artifacts/issue-triage/issue/issue.json \
+            --output .artifacts/issue-triage/issue/issue-classification.json
+          MODE="$(jq -r '.mode' .artifacts/issue-triage/issue/issue-classification.json)"
+          REASON="$(jq -r '.reason' .artifacts/issue-triage/issue/issue-classification.json)"
+          echo "mode=$MODE" >> "$GITHUB_OUTPUT"
+          echo "reason=$REASON" >> "$GITHUB_OUTPUT"
+          if [ "$MODE" = "thread_teaching_record" ]; then
+            echo "Canonical thread-teaching record detected; skipping objective triage." >> "$GITHUB_STEP_SUMMARY"
+            jq -r '"- kind: " + .record.kind' .artifacts/issue-triage/issue/issue-classification.json >> "$GITHUB_STEP_SUMMARY"
+            jq -r '"- summary: " + .record.summary' .artifacts/issue-triage/issue/issue-classification.json >> "$GITHUB_STEP_SUMMARY"
+          elif [ "$MODE" = "invalid_thread_teaching_record" ]; then
+            echo "Collaboration/thread-teaching issue is malformed; objective triage is blocked." >> "$GITHUB_STEP_SUMMARY"
+            echo "- reason: $REASON" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Enforce prerelease target scope
+        if: ${{ steps.preflight.outputs.enabled == 'true' && steps.issue_mode.outputs.mode == 'triage' }}
         id: target_scope
         run: |
           TARGET_REPO="${{ steps.issue.outputs.target_repo }}"
@@ -168,7 +188,7 @@ jobs:
           fi
 
       - name: Evaluate issue replay guard
-        if: ${{ steps.preflight.outputs.enabled == 'true' && steps.target_scope.outputs.allowed == 'true' }}
+        if: ${{ steps.preflight.outputs.enabled == 'true' && steps.issue_mode.outputs.mode == 'triage' && steps.target_scope.outputs.allowed == 'true' }}
         id: issue_replay_guard
         run: |
           node scripts/issue-triage-replay-guard.mjs \
@@ -188,7 +208,7 @@ jobs:
           fi
 
       - name: Derive thread teaching context
-        if: ${{ steps.preflight.outputs.enabled == 'true' && steps.target_scope.outputs.allowed == 'true' }}
+        if: ${{ steps.preflight.outputs.enabled == 'true' && steps.issue_mode.outputs.mode == 'triage' && steps.target_scope.outputs.allowed == 'true' }}
         run: |
           node scripts/derive-thread-teaching-context.mjs \
             --mode issue \
@@ -205,7 +225,7 @@ jobs:
           fi
 
       - name: Run issue-triage on issue
-        if: ${{ steps.preflight.outputs.enabled == 'true' && steps.target_scope.outputs.allowed == 'true' && steps.issue_replay_guard.outputs.status == 'run' }}
+        if: ${{ steps.preflight.outputs.enabled == 'true' && steps.issue_mode.outputs.mode == 'triage' && steps.target_scope.outputs.allowed == 'true' && steps.issue_replay_guard.outputs.status == 'run' }}
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           ISSUE_TITLE: ${{ steps.issue.outputs.title }}
@@ -296,7 +316,7 @@ jobs:
             --output "$GITHUB_WORKSPACE/.artifacts/issue-triage/issue/worker-run-summary.json"
 
       - name: Evaluate operator-memory PR
-        if: ${{ steps.preflight.outputs.enabled == 'true' && steps.target_scope.outputs.allowed == 'true' && steps.issue_replay_guard.outputs.status == 'run' && hashFiles('.artifacts/issue-triage/issue/operator-memory-publish.json') != '' }}
+        if: ${{ steps.preflight.outputs.enabled == 'true' && steps.issue_mode.outputs.mode == 'triage' && steps.target_scope.outputs.allowed == 'true' && steps.issue_replay_guard.outputs.status == 'run' && hashFiles('.artifacts/issue-triage/issue/operator-memory-publish.json') != '' }}
         run: |
           node scripts/evaluate-generated-pr.mjs \
             --publish ".artifacts/issue-triage/issue/operator-memory-publish.json" \
@@ -304,7 +324,7 @@ jobs:
             --output ".artifacts/issue-triage/issue/operator-memory-pr-eval.json"
 
       - name: Evaluate issue comment quality
-        if: ${{ steps.preflight.outputs.enabled == 'true' && steps.target_scope.outputs.allowed == 'true' && steps.issue_replay_guard.outputs.status == 'run' }}
+        if: ${{ steps.preflight.outputs.enabled == 'true' && steps.issue_mode.outputs.mode == 'triage' && steps.target_scope.outputs.allowed == 'true' && steps.issue_replay_guard.outputs.status == 'run' }}
         id: issue_comment_quality
         run: |
           if [ ! -f ".artifacts/issue-triage/issue/triage-comment.md" ]; then
@@ -326,7 +346,7 @@ jobs:
           fi
 
       - name: Post issue comment
-        if: ${{ steps.preflight.outputs.enabled == 'true' && steps.target_scope.outputs.allowed == 'true' && steps.issue_replay_guard.outputs.status == 'run' && steps.issue_comment_quality.outputs.status == 'pass' && always() }}
+        if: ${{ steps.preflight.outputs.enabled == 'true' && steps.issue_mode.outputs.mode == 'triage' && steps.target_scope.outputs.allowed == 'true' && steps.issue_replay_guard.outputs.status == 'run' && steps.issue_comment_quality.outputs.status == 'pass' && always() }}
         run: |
           if [ ! -f ".artifacts/issue-triage/issue/triage-comment.md" ]; then
             exit 0
@@ -352,7 +372,18 @@ jobs:
           QUIET_REASON=""
           SUMMARY=""
           TITLE=""
-          if [ "${{ steps.target_scope.outputs.allowed }}" != "true" ]; then
+          if [ "${{ steps.issue_mode.outputs.mode }}" = "thread_teaching_record" ]; then
+            FEED_CHANNEL="ops"
+            TITLE="recorded thread-teaching issue #${ISSUE_NUM} on ${TARGET}"
+            SUMMARY="recognized canonical thread-teaching evidence and skipped objective triage"
+          elif [ "${{ steps.issue_mode.outputs.mode }}" = "invalid_thread_teaching_record" ]; then
+            FEED_STATUS="paused"
+            FEED_CHANNEL="ops"
+            BLOCKED_BY="thread_teaching_record"
+            QUIET_REASON="${{ steps.issue_mode.outputs.reason }}"
+            TITLE="thread-teaching issue held for repair on ${TARGET}"
+            SUMMARY="collaboration issue #${ISSUE_NUM} is not a valid canonical thread-teaching record"
+          elif [ "${{ steps.target_scope.outputs.allowed }}" != "true" ]; then
             FEED_STATUS="waiting"
             FEED_CHANNEL="ops"
             BLOCKED_BY="target_scope"
@@ -420,7 +451,7 @@ jobs:
             "${RUNX_PUBLIC_EVIDENCE_API_BASE_URL%/}/v1/admin/public/evidence" || true
 
       - name: Upload issue artifacts
-        if: ${{ always() && steps.preflight.outputs.enabled == 'true' && steps.target_scope.outputs.allowed == 'true' }}
+        if: ${{ always() && steps.preflight.outputs.enabled == 'true' }}
         uses: actions/upload-artifact@v7
         with:
           name: issue-triage-issue-${{ steps.issue.outputs.number || github.event.issue.number || github.event.inputs.issue_number }}

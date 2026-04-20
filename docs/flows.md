@@ -25,7 +25,21 @@ This lane has two entry modes:
    skipped before objective triage begins
 2. PR mode builds a live PR snapshot, runs it through `github-triage`, and
    posts a maintainer comment back to the PR. Public-value and replay gates
-   block low-signal or duplicate comments for the same head SHA
+   block low-signal or duplicate comments for the same head SHA. Generated
+   `issue-triage` state-refresh PRs are blocked before model work because they
+   are review surfaces, not new triage subjects
+
+## `collaboration-record`
+
+This lane is the dedicated approval-record surface for collaboration issues.
+
+It listens for `[collaboration]` issues or explicit
+`aster:thread-teaching-record` markers, validates the canonical record shape,
+publishes an ops evidence row, and queues `thread-teaching-derive` when the
+record is accepted.
+
+Malformed collaboration issues fail closed. They are held for repair instead of
+quietly turning into objective-triage runs.
 
 ## `fix-pr`
 
@@ -40,7 +54,9 @@ is hard-gated by a collaboration issue that authorizes `fix-pr.publish`.
 Runs on manual dispatch for one bounded docs or explanation request. The
 workflow uses the same governed PR runner as `fix-pr`, but tightens the request
 to docs-only changes before validation and draft PR publication. Publication is
-hard-gated by a collaboration issue that authorizes `docs-pr.publish`.
+hard-gated by a collaboration issue that authorizes `docs-pr.publish`. Hosted
+provider work writes live trace files while the lane is running and the
+workflow step carries an explicit timeout.
 
 ## `skill-lab`
 

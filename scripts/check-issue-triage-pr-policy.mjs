@@ -1,6 +1,7 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
+import { inferGeneratedPrLane } from "./generated-pr-policy.mjs";
 import { evaluatePublicCommentOpportunity } from "./public-work-policy.mjs";
 
 async function main(argv = process.argv.slice(2)) {
@@ -12,6 +13,20 @@ async function main(argv = process.argv.slice(2)) {
 export async function checkIssueTriagePrPolicy(options) {
   const snapshot = JSON.parse(await readFile(path.resolve(options.snapshot), "utf8"));
   const dossier = options.dossier ? await loadTargetDossier(path.resolve(options.dossier)) : null;
+  const generatedLane = inferGeneratedPrLane({
+    headRefName: snapshot.head_ref,
+    title: snapshot.title,
+    body: snapshot.body,
+  });
+  if (generatedLane === "issue-triage") {
+    return {
+      allowed: false,
+      reasons: ["generated_issue_triage_pr"],
+      welcome_signal: false,
+      target_subject_locator: dossier?.subject_locator ?? null,
+      generated_lane: generatedLane,
+    };
+  }
   const policy = evaluatePublicCommentOpportunity({
     source: "github_pull_request",
     lane: options.lane ?? "issue-triage",
@@ -29,6 +44,7 @@ export async function checkIssueTriagePrPolicy(options) {
     reasons: policy.reasons,
     welcome_signal: policy.welcome_signal,
     target_subject_locator: dossier?.subject_locator ?? null,
+    generated_lane: generatedLane === "unknown" ? null : generatedLane,
   };
 }
 

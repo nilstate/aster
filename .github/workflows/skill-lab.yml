@@ -121,6 +121,7 @@ jobs:
 
       - name: Run objective-to-skill
         if: ${{ steps.preflight.outputs.enabled == 'true' }}
+        timeout-minutes: 30
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           ISSUE_TITLE: ${{ steps.issue.outputs.title }}

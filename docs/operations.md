@@ -13,6 +13,8 @@ description: Secrets, thread teaching, artifacts, and what still needs hardening
   default workflow token
 - `RUNX_CALLER_MODEL` (optional repo variable): pinned model snapshot for the
   hosted bridge
+- `RUNX_CALLER_MAX_ATTEMPTS` (optional repo variable): retry budget for one
+  hosted caller resolution request before the lane fails closed
 - `RUNX_CALLER_REQUEST_TIMEOUT_MS` (optional repo variable): per-request
   timeout for external caller model invocations. Hosted workflows default to
   `300000` so stuck cognitive work fails boundedly instead of occupying a
@@ -84,6 +86,9 @@ Thread teaching is the canonical human-teaching layer:
 - issue triage writes comments only through the dedicated workflow
 - docs PRs, fix PRs, and upstream skill publication require a collaboration
   issue with explicit publish authorization in thread memory
+- `collaboration-record` is the dedicated approval-record workflow: it validates
+  canonical collaboration issues, records ops evidence, and queues
+  `thread-teaching-derive` instead of entering objective triage
 - collaboration issues that already contain a canonical thread-teaching record
   are treated as approval evidence, not as fresh objective-triage work; malformed
   collaboration issues are held for repair instead of spawning memory PRs
@@ -92,6 +97,9 @@ Thread teaching is the canonical human-teaching layer:
   portable `SKILL.md` unless a maintainer explicitly authorizes more
 - generated PR policy enforcement keeps `runx/*` PRs draft-only and explicitly
   human-reviewed
+- generated `issue-triage` state-refresh PRs are review surfaces only and are
+  blocked from PR-mode `issue-triage`; the lane should not recursively comment
+  on its own derived-state refreshes
 - merge-watch is read-only against upstream repos. It records PR state, checks,
   merge commit, and upstream blob metadata, then emits an internal
   registry-binding request after merge
@@ -150,6 +158,9 @@ Every mutating or public lane uploads:
 - the final `runx` JSON result
 - the receipts directory
 - provider traces for each `agent-step`
+- live caller-state files in `provider-trace/latest.json` plus one
+  `provider-trace/*-live.json` per active request when hosted cognitive work is
+  in flight
 
 That makes failures diagnosable and keeps the trust boundary visible.
 
@@ -178,6 +189,8 @@ These are no longer undefined gaps. They are explicit execution requirements.
   memory, public face, docs, or runtime code
 - on `aster` itself, doctrine writes remain human-only and learned/public
   memory writes belong to dedicated promotion flows rather than general PR lanes
+- hosted caller steps should also carry explicit workflow timeouts so a stalled
+  provider request fails closed and still leaves uploadable diagnostics
 
 ### Merge and rollback
 

@@ -70,3 +70,27 @@ test("checkIssueTriagePrPolicy blocks targets in trust recovery after spam", asy
   assert.equal(result.allowed, false);
   assert.match(result.reasons.join(","), /comment_lane_in_trust_recovery/);
 });
+
+test("checkIssueTriagePrPolicy blocks generated issue-triage operator-memory PRs", async () => {
+  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "aster-pr-policy-generated-"));
+  const snapshotPath = path.join(tempRoot, "snapshot.json");
+  await writeFile(
+    snapshotPath,
+    `${JSON.stringify({
+      title: "[runx] update issue-triage operator memory",
+      body: "## Summary\n\nGenerated policy body.",
+      author: "github-actions[bot]",
+      author_association: "MEMBER",
+      head_ref: "runx/operator-memory-issue-triage-nilstate-aster-pr-71",
+      labels: [],
+      comment_count: 0,
+      review_count: 0,
+    }, null, 2)}\n`,
+  );
+
+  const result = await checkIssueTriagePrPolicy({ snapshot: snapshotPath });
+
+  assert.equal(result.allowed, false);
+  assert.deepEqual(result.reasons, ["generated_issue_triage_pr"]);
+  assert.equal(result.generated_lane, "issue-triage");
+});

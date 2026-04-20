@@ -1,0 +1,166 @@
+spec_version: "1.1"
+task_id: "governed-collaboration-surface-hardening"
+created: "2026-04-20T05:45:00Z"
+updated: "2026-04-20T06:45:00Z"
+status: "completed"
+
+task:
+  title: "Harden aster collaboration surfaces, PR triage boundaries, and hosted caller execution"
+  summary: >
+    Complete the next quality cut after the thread-teaching hard cutover.
+    Collaboration issues should become their own governed evidence lane rather
+    than entering objective triage. PR-mode issue-triage must stop consuming
+    generated issue-triage operator-memory PRs and recursively opening more of
+    them. Hosted cognitive lanes should fail boundedly and leave enough trace
+    state to debug stalls. This slice keeps the existing thread-teaching model
+    but makes the live surfaces legible, bounded, and non-recursive.
+  size: "medium"
+  risk_level: "high"
+  context:
+    packages:
+      - ".ai/specs"
+      - ".github/workflows"
+      - "scripts"
+      - "docs"
+    invariants:
+      - "collaboration_issues_are_canonical_evidence_not_objectives"
+      - "generated_issue_triage_prs_are_review_surfaces_not_new_triage_inputs"
+      - "hosted_cognitive_work_fails_boundedly"
+      - "receipts_and_artifacts_remain_canonical"
+      - "no_hidden_compat_aliases"
+    related_docs:
+      - "docs/operations.md"
+      - "docs/flows.md"
+      - "docs/run-catalog.md"
+      - "docs/operating-model.md"
+      - "docs/architecture.md"
+      - ".ai/specs/active/aster-thread-teaching-cutover.yaml"
+  objectives:
+    - "Add a dedicated collaboration-record workflow for canonical collaboration issues."
+    - "Exclude collaboration issues from automatic issue-triage issue mode."
+    - "Dispatch derived thread-teaching refresh from accepted collaboration records."
+    - "Block PR-mode issue-triage on generated issue-triage operator-memory PRs."
+    - "Bound hosted caller steps with workflow timeouts and live trace updates."
+    - "Document the new lane and the recursion boundary in the repo-owned docs."
+  scope:
+    in_scope:
+      - "New collaboration-record workflow and supporting packet script"
+      - "Issue-triage trigger and PR public-value policy tightening"
+      - "Hosted caller timeout and trace hardening in live workflows and bridge"
+      - "Docs/catalog updates"
+      - "Targeted tests"
+    out_of_scope:
+      - "Hosted runx memory service implementation"
+      - "Closing or rewriting historical recursive PRs"
+      - "A redesign of skill-lab PR review semantics"
+  acceptance:
+    validation_profile: "strict"
+    definition_of_done:
+      - id: "dod1"
+        description: "Collaboration issues have a dedicated workflow and no longer auto-enter issue-triage issue mode."
+        status: "completed"
+      - id: "dod2"
+        description: "Generated issue-triage operator-memory PRs are blocked from PR-mode issue-triage."
+        status: "completed"
+      - id: "dod3"
+        description: "Hosted caller steps have explicit bounded timeouts and live trace writes."
+        status: "completed"
+      - id: "dod4"
+        description: "Docs and run catalog describe the collaboration-record lane and recursion boundary."
+        status: "completed"
+    validation:
+      - id: "v1"
+        type: "test"
+        description: "Collaboration packet and PR policy tests pass."
+        command: "node --test scripts/build-collaboration-record-packet.test.mjs scripts/check-issue-triage-pr-policy.test.mjs"
+        expected: "exit code 0"
+      - id: "v2"
+        type: "boundary"
+        description: "Workflow YAML parses after the new lane and timeout changes."
+        command: "python3 -c \"import yaml; [yaml.safe_load(open(p)) for p in ['.github/workflows/collaboration-record.yml', '.github/workflows/issue-triage.yml', '.github/workflows/docs-pr.yml', '.github/workflows/fix-pr.yml', '.github/workflows/skill-lab.yml']]; print('ok')\""
+        expected: "ok"
+      - id: "v3"
+        type: "boundary"
+        description: "Repo file contract still passes."
+        command: "node scripts/check.mjs && git diff --check"
+        expected: "aster check passed"
+
+planning_log:
+  - timestamp: "2026-04-20T05:45:00Z"
+    actor: "agent"
+    summary: >
+      Created after live testing showed two remaining quality defects:
+      collaboration issues still shared a workflow surface with issue-triage,
+      and PR-mode issue-triage was recursively producing operator-memory PRs.
+  - timestamp: "2026-04-20T06:45:00Z"
+    actor: "agent"
+    summary: >
+      Completed the collaboration split, PR recursion stop, hosted caller
+      timeout and live-trace hardening, and the repo-owned docs alignment.
+
+phases:
+  - id: "phase1"
+    name: "Collaboration Surface Split"
+    objective: "Move canonical collaboration issues into their own lane and packet surface."
+    changes:
+      - file: ".github/workflows/collaboration-record.yml"
+        action: "create"
+      - file: "scripts/build-collaboration-record-packet.mjs"
+        action: "create"
+      - file: "scripts/build-collaboration-record-packet.test.mjs"
+        action: "create"
+      - file: ".github/workflows/issue-triage.yml"
+        action: "update"
+    status: "completed"
+  - id: "phase2"
+    name: "Recursion Stop"
+    objective: "Prevent generated issue-triage operator-memory PRs from re-entering PR-mode issue-triage."
+    dependencies: ["phase1"]
+    changes:
+      - file: "scripts/check-issue-triage-pr-policy.mjs"
+        action: "update"
+      - file: "scripts/check-issue-triage-pr-policy.test.mjs"
+        action: "update"
+      - file: "scripts/generated-pr-policy.mjs"
+        action: "update"
+    status: "completed"
+  - id: "phase3"
+    name: "Bounded Hosted Execution"
+    objective: "Give hosted cognitive lanes bounded timeouts and live bridge trace writes."
+    dependencies: ["phase2"]
+    changes:
+      - file: ".github/workflows/docs-pr.yml"
+        action: "update"
+      - file: ".github/workflows/fix-pr.yml"
+        action: "update"
+      - file: ".github/workflows/issue-triage.yml"
+        action: "update"
+      - file: ".github/workflows/skill-lab.yml"
+        action: "update"
+      - file: "scripts/runx-agent-bridge.mjs"
+        action: "update"
+    status: "completed"
+  - id: "phase4"
+    name: "Docs And Closeout"
+    objective: "Describe the new lane and the recursion boundary in repo-owned docs."
+    dependencies: ["phase3"]
+    changes:
+      - file: "docs/operations.md"
+        action: "update"
+      - file: "docs/flows.md"
+        action: "update"
+      - file: "docs/run-catalog.md"
+        action: "update"
+      - file: "docs/operating-model.md"
+        action: "update"
+      - file: "docs/architecture.md"
+        action: "update"
+    status: "completed"
+
+rollback:
+  strategy: "per_phase"
+  commands:
+    phase1: "git checkout HEAD -- .github/workflows/collaboration-record.yml scripts/build-collaboration-record-packet.mjs scripts/build-collaboration-record-packet.test.mjs .github/workflows/issue-triage.yml"
+    phase2: "git checkout HEAD -- scripts/check-issue-triage-pr-policy.mjs scripts/check-issue-triage-pr-policy.test.mjs scripts/generated-pr-policy.mjs"
+    phase3: "git checkout HEAD -- .github/workflows/docs-pr.yml .github/workflows/fix-pr.yml .github/workflows/issue-triage.yml .github/workflows/skill-lab.yml scripts/runx-agent-bridge.mjs"
+    phase4: "git checkout HEAD -- docs/operations.md docs/flows.md docs/run-catalog.md docs/operating-model.md"

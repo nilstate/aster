@@ -242,6 +242,10 @@ The important rule is that derived context can be thrown away and rebuilt from
 canonical evidence. That keeps `aster` legible when memory inevitably gets
 smarter.
 
+Issues and PRs are therefore not "memory." They are canonical provider-thread
+evidence. `aster` uses them to project derived context, lessons, and policy
+state, but the thread remains the stronger layer.
+
 ## Subject Identity
 
 The hosted memory layer needs one stable subject model or it will rot.

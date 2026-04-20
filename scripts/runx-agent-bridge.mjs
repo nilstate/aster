@@ -280,6 +280,7 @@ async function resolveCognitiveWork({
   const requestTimeoutMs = Number(process.env.RUNX_CALLER_REQUEST_TIMEOUT_MS ?? "1200000");
 
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    const attemptStartedAt = new Date().toISOString();
     const messages = buildInputMessages(request, expectedOutputs, previousFailure, contextText);
     const payload = buildResponsesPayload({ model, messages, reasoningEffort });
 
@@ -288,30 +289,35 @@ async function resolveCognitiveWork({
     let requestApi = "responses";
     let initialFailure;
     try {
-      response = await postJson("https://api.openai.com/v1/responses", {
+      response = await runProviderRequestWithTrace({
+        requestId,
+        attempt,
+        maxAttempts,
+        requestApi,
+        traceDir,
+        startedAt: attemptStartedAt,
+        timeoutMs: requestTimeoutMs,
+        expectedOutputs,
+        requestPayload: payload,
+        url: "https://api.openai.com/v1/responses",
         headers: {
           Authorization: `Bearer ${apiKey}`,
           "Content-Type": "application/json",
           "X-Client-Request-Id": `${requestId}-${attempt}`.slice(0, 128),
         },
-        body: JSON.stringify(payload),
-        timeoutMs: requestTimeoutMs,
       });
     } catch (error) {
       lastTransportError = error;
-      await writeFile(
-        path.join(traceDir, `${requestId}-attempt-${attempt}.json`),
-        `${JSON.stringify(
-          {
-            request: payload,
-            response: null,
-            raw_response: null,
-            transport_error: serializeError(error),
-          },
-          null,
-          2,
-        )}\n`,
-      );
+      await writeAttemptTraceFile({
+        traceDir,
+        requestId,
+        attempt,
+        requestApi,
+        request: payload,
+        response: null,
+        rawResponse: null,
+        transportError: serializeError(error),
+      });
       if (attempt < maxAttempts && isRetryableTransportError(error)) {
         await sleep(backoffDelayMs(attempt));
         continue;
@@ -331,31 +337,76 @@ async function resolveCognitiveWork({
       };
       requestApi = "chat_completions";
       requestPayload = buildChatCompletionsPayload({ model, messages });
-      response = await postJson("https://api.openai.com/v1/chat/completions", {
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          "Content-Type": "application/json",
-          "X-Client-Request-Id": `${requestId}-${attempt}-fallback`.slice(0, 128),
-        },
-        body: JSON.stringify(requestPayload),
-        timeoutMs: requestTimeoutMs,
-      });
+      try {
+        response = await runProviderRequestWithTrace({
+          requestId,
+          attempt,
+          maxAttempts,
+          requestApi,
+          traceDir,
+          startedAt: attemptStartedAt,
+          timeoutMs: requestTimeoutMs,
+          expectedOutputs,
+          requestPayload,
+          url: "https://api.openai.com/v1/chat/completions",
+          headers: {
+            Authorization: `Bearer ${apiKey}`,
+            "Content-Type": "application/json",
+            "X-Client-Request-Id": `${requestId}-${attempt}-fallback`.slice(0, 128),
+          },
+        });
+      } catch (error) {
+        lastTransportError = error;
+        await writeAttemptTraceFile({
+          traceDir,
+          requestId,
+          attempt,
+          requestApi,
+          request: requestPayload,
+          response: null,
+          rawResponse: null,
+          initialFailure,
+          transportError: serializeError(error),
+        });
+        if (attempt < maxAttempts && isRetryableTransportError(error)) {
+          await sleep(backoffDelayMs(attempt));
+          continue;
+        }
+        throw error;
+      }
       raw = response.body;
       parsed = safeJsonParse(raw);
     }
 
-    await writeFile(
-      path.join(traceDir, `${requestId}-attempt-${attempt}.json`),
-      `${JSON.stringify({
-        request_api: requestApi,
-        request: requestPayload,
-        response: parsed,
-        raw_response: raw,
-        initial_failure: initialFailure,
-      }, null, 2)}\n`,
-    );
+    await writeAttemptTraceFile({
+      traceDir,
+      requestId,
+      attempt,
+      requestApi,
+      request: requestPayload,
+      response: parsed,
+      rawResponse: raw,
+      initialFailure,
+    });
 
     if (response.statusCode < 200 || response.statusCode >= 300) {
+      await writeLiveTraceState({
+        traceDir,
+        requestId,
+        snapshot: buildLiveTraceState({
+          requestId,
+          attempt,
+          maxAttempts,
+          requestApi,
+          status: "http_error",
+          timeoutMs: requestTimeoutMs,
+          startedAt: attemptStartedAt,
+          heartbeatAt: new Date().toISOString(),
+          expectedOutputs,
+          note: truncate(raw, 800),
+          responseStatus: response.statusCode,
+        }),
+      });
       throw new Error(
         `OpenAI request failed: ${response.statusCode} ${response.statusMessage}\n${truncate(raw, 4000)}`,
       );
@@ -364,6 +415,23 @@ async function resolveCognitiveWork({
     const outputTexts = extractOutputTextCandidates(parsed);
     if (outputTexts.length === 0) {
       previousFailure = `The response did not include output_text. Raw response: ${truncate(raw, 1200)}`;
+      const liveStatus = attempt < maxAttempts ? "retrying_invalid_response" : "failed";
+      await writeLiveTraceState({
+        traceDir,
+        requestId,
+        snapshot: buildLiveTraceState({
+          requestId,
+          attempt,
+          maxAttempts,
+          requestApi,
+          status: liveStatus,
+          timeoutMs: requestTimeoutMs,
+          startedAt: attemptStartedAt,
+          heartbeatAt: new Date().toISOString(),
+          expectedOutputs,
+          note: previousFailure,
+        }),
+      });
       continue;
     }
 
@@ -378,6 +446,22 @@ async function resolveCognitiveWork({
 
       const validationError = validateResolution(parsedOutput, expectedOutputs);
       if (!validationError) {
+        await writeLiveTraceState({
+          traceDir,
+          requestId,
+          snapshot: buildLiveTraceState({
+            requestId,
+            attempt,
+            maxAttempts,
+            requestApi,
+            status: "completed",
+            timeoutMs: requestTimeoutMs,
+            startedAt: attemptStartedAt,
+            heartbeatAt: new Date().toISOString(),
+            expectedOutputs,
+            note: "resolution accepted",
+          }),
+        });
         return parsedOutput;
       }
 
@@ -385,6 +469,23 @@ async function resolveCognitiveWork({
     }
 
     previousFailure = candidateFailure;
+    const liveStatus = attempt < maxAttempts ? "retrying_invalid_response" : "failed";
+    await writeLiveTraceState({
+      traceDir,
+      requestId,
+      snapshot: buildLiveTraceState({
+        requestId,
+        attempt,
+        maxAttempts,
+        requestApi,
+        status: liveStatus,
+        timeoutMs: requestTimeoutMs,
+        startedAt: attemptStartedAt,
+        heartbeatAt: new Date().toISOString(),
+        expectedOutputs,
+        note: previousFailure,
+      }),
+    });
   }
 
   if (lastTransportError && !previousFailure) {
@@ -681,6 +782,49 @@ export function threadTeachingAllowsGate(threadTeachingContext, gate) {
   return threadTeachingContextAllowsGate(threadTeachingContext, gate);
 }
 
+export function inferTraceHeartbeatIntervalMs(timeoutMs) {
+  if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) {
+    return 15000;
+  }
+  return Math.max(5000, Math.min(15000, Math.floor(timeoutMs / 6)));
+}
+
+export function buildLiveTraceState({
+  requestId,
+  attempt,
+  maxAttempts,
+  requestApi,
+  status,
+  timeoutMs,
+  startedAt,
+  heartbeatAt,
+  expectedOutputs,
+  note = null,
+  responseStatus = null,
+}) {
+  const resolvedStartedAt = normalizeTimestamp(startedAt) ?? heartbeatAt ?? new Date().toISOString();
+  const resolvedHeartbeatAt = normalizeTimestamp(heartbeatAt) ?? new Date().toISOString();
+  const elapsedMs = Math.max(
+    0,
+    Date.parse(resolvedHeartbeatAt) - Date.parse(resolvedStartedAt),
+  );
+  return {
+    kind: "aster.provider-trace-live.v1",
+    request_id: requestId,
+    attempt,
+    max_attempts: maxAttempts,
+    request_api: requestApi,
+    status,
+    timeout_ms: timeoutMs,
+    expected_output_keys: Object.keys(expectedOutputs ?? {}),
+    started_at: resolvedStartedAt,
+    updated_at: resolvedHeartbeatAt,
+    elapsed_ms: elapsedMs,
+    response_status: responseStatus,
+    note,
+  };
+}
+
 function buildGateDecisionRecord({ gate, threadTeachingContext, approvalMechanism }) {
   const matchingAuthorization = (threadTeachingContext?.gate_authorizations ?? []).find((authorization) =>
     gateSelectorMatches(normalizeString(authorization?.selector), normalizeString(gate?.id))
@@ -767,6 +911,156 @@ function sanitizeTraceName(value) {
   return value.replace(/[^a-zA-Z0-9_.-]+/g, "_");
 }
 
+async function writeAttemptTraceFile({
+  traceDir,
+  requestId,
+  attempt,
+  requestApi,
+  request,
+  response,
+  rawResponse,
+  initialFailure = null,
+  transportError = null,
+}) {
+  await writeFile(
+    path.join(traceDir, `${requestId}-attempt-${attempt}.json`),
+    `${JSON.stringify(
+      {
+        request_api: requestApi,
+        request,
+        response,
+        raw_response: rawResponse,
+        initial_failure: initialFailure,
+        transport_error: transportError,
+      },
+      null,
+      2,
+    )}\n`,
+  );
+}
+
+async function writeLiveTraceState({ traceDir, requestId, snapshot }) {
+  const rendered = `${JSON.stringify(snapshot, null, 2)}\n`;
+  await writeFile(path.join(traceDir, `${requestId}-live.json`), rendered);
+  await writeFile(path.join(traceDir, "latest.json"), rendered);
+}
+
+function logBridgeProgress({ requestId, attempt, maxAttempts, requestApi, status, note, elapsedMs }) {
+  const suffix = typeof note === "string" && note.trim().length > 0 ? ` ${note.trim()}` : "";
+  const elapsed = Number.isFinite(elapsedMs) ? ` elapsed_ms=${elapsedMs}` : "";
+  process.stderr.write(
+    `[runx-agent-bridge] request=${requestId} attempt=${attempt}/${maxAttempts} api=${requestApi} status=${status}${elapsed}${suffix}\n`,
+  );
+}
+
+async function runProviderRequestWithTrace({
+  requestId,
+  attempt,
+  maxAttempts,
+  requestApi,
+  traceDir,
+  startedAt,
+  timeoutMs,
+  expectedOutputs,
+  requestPayload,
+  url,
+  headers,
+}) {
+  const resolvedStartedAt = normalizeTimestamp(startedAt) ?? new Date().toISOString();
+  const heartbeatIntervalMs = inferTraceHeartbeatIntervalMs(timeoutMs);
+  const emit = async ({ status, note = null, responseStatus = null, heartbeatAt } = {}) => {
+    const snapshot = buildLiveTraceState({
+      requestId,
+      attempt,
+      maxAttempts,
+      requestApi,
+      status,
+      timeoutMs,
+      startedAt: resolvedStartedAt,
+      heartbeatAt,
+      expectedOutputs,
+      note,
+      responseStatus,
+    });
+    await writeLiveTraceState({ traceDir, requestId, snapshot });
+    return snapshot;
+  };
+
+  const startedSnapshot = await emit({
+    status: "requesting",
+    note: `timeout_ms=${timeoutMs}`,
+  });
+  logBridgeProgress({
+    requestId,
+    attempt,
+    maxAttempts,
+    requestApi,
+    status: startedSnapshot.status,
+    note: startedSnapshot.note,
+    elapsedMs: startedSnapshot.elapsed_ms,
+  });
+
+  const heartbeat = setInterval(() => {
+    const heartbeatAt = new Date().toISOString();
+    const note = `still waiting; heartbeat_interval_ms=${heartbeatIntervalMs}`;
+    void emit({
+      status: "waiting",
+      note,
+      heartbeatAt,
+    }).then((snapshot) => {
+      logBridgeProgress({
+        requestId,
+        attempt,
+        maxAttempts,
+        requestApi,
+        status: snapshot.status,
+        note,
+        elapsedMs: snapshot.elapsed_ms,
+      });
+    }).catch(() => {});
+  }, heartbeatIntervalMs);
+
+  try {
+    const response = await postJson(url, {
+      headers,
+      body: JSON.stringify(requestPayload),
+      timeoutMs,
+    });
+    clearInterval(heartbeat);
+    const receivedSnapshot = await emit({
+      status: response.statusCode >= 200 && response.statusCode < 300 ? "received" : "http_error",
+      responseStatus: response.statusCode,
+      note: response.statusMessage || null,
+    });
+    logBridgeProgress({
+      requestId,
+      attempt,
+      maxAttempts,
+      requestApi,
+      status: receivedSnapshot.status,
+      note: receivedSnapshot.note,
+      elapsedMs: receivedSnapshot.elapsed_ms,
+    });
+    return response;
+  } catch (error) {
+    clearInterval(heartbeat);
+    const failedSnapshot = await emit({
+      status: "transport_error",
+      note: error?.message ?? String(error),
+    });
+    logBridgeProgress({
+      requestId,
+      attempt,
+      maxAttempts,
+      requestApi,
+      status: failedSnapshot.status,
+      note: failedSnapshot.note,
+      elapsedMs: failedSnapshot.elapsed_ms,
+    });
+    throw error;
+  }
+}
+
 export function shouldFallbackToChatCompletions({ response, parsed }) {
   if (process.env.RUNX_DISABLE_CHAT_COMPLETIONS_FALLBACK === "true") {
     return false;
@@ -813,6 +1107,10 @@ function backoffDelayMs(attempt) {
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function normalizeTimestamp(value) {
+  return typeof value === "string" && !Number.isNaN(Date.parse(value)) ? value : null;
 }
 
 if (process.argv[1] && import.meta.url === new URL(`file://${process.argv[1]}`).href) {

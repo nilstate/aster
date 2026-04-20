@@ -22,6 +22,18 @@ This is the live run catalog for `aster`.
   specs, changed repo files, receipts, draft PRs, issue backlink comments,
   posted PR comments, comment evals, generated-PR evals, and active
   thread-teaching context
+- boundary: generated `issue-triage` state-refresh PRs are blocked from
+  PR-mode `issue-triage`; they remain review surfaces only
+
+### `collaboration-record`
+
+- trigger: GitHub issues titled `[collaboration] ...`, issues containing the
+  canonical `aster:thread-teaching-record` marker, plus manual dispatch
+- command: `node scripts/build-collaboration-record-packet.mjs`
+- purpose: validate canonical collaboration records as approval evidence,
+  publish an ops-visible receipt row, and queue `thread-teaching-derive`
+- output: collaboration packet, validation status, public evidence row, queued
+  derive refresh, uploaded issue artifact packet
 
 ### `skill-lab`
 
@@ -39,7 +51,8 @@ This is the live run catalog for `aster`.
   outside issue-triage worker fanout
 - gate: requires a collaboration issue authorizing `fix-pr.publish`
 - output: normalized request packet, verification report, receipts, draft PR,
-  generated-PR eval, change-surface policy
+  generated-PR eval, change-surface policy, and live provider-trace heartbeat
+  files while hosted caller work is in flight
 
 ### `docs-pr`
 
@@ -49,7 +62,8 @@ This is the live run catalog for `aster`.
   `runx/*` PR while constraining the mutation to docs-only scope
 - gate: requires a collaboration issue authorizing `docs-pr.publish`
 - output: normalized request packet, verification report, receipts, draft PR,
-  generated-PR eval, change-surface policy
+  generated-PR eval, change-surface policy, and live provider-trace heartbeat
+  files while hosted caller work is in flight
 
 ### `skill-upstream`
 

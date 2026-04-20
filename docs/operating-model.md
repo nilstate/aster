@@ -22,6 +22,12 @@ If the system needs more sophistication, that should show up as better docs,
 sharper skill context, stronger typed packets, and clearer thread teaching, not
 as more hidden magic.
 
+One terminology rule follows from that:
+
+- issue and PR threads are canonical human-authored evidence
+- derived memory or policy state is a projection over that evidence
+- the projection must stay rebuildable and reviewable
+
 ## Boundary
 
 `runx` is the governed runtime. `aster` is a separate operator that uses
@@ -33,6 +39,9 @@ That means:
   artifacts, and generic memory
 - `aster` owns operator semantics such as priorities, targets,
   reflections, and public narrative
+- provider-thread evidence belongs at the `runx` boundary as a generic evidence
+  family; `aster` owns the thread-teaching and collaboration semantics it
+  projects from that evidence
 
 If a concept would only make sense for `aster`, it should not become a
 `runx` product noun.
@@ -108,11 +117,15 @@ That progression should be gradual:
 
 - `site-pages` publishes the public site from committed repo-owned operator
   content
+- `collaboration-record` validates collaboration issues as canonical evidence
+  and refreshes derived thread-teaching state without entering objective triage
 - `issue-triage` turns issue intake into a public triage artifact, then
   runs `objective-decompose` when the gate approves planning, and only starts
   an `issue-to-pr` worker when the gate approves bounded build work
 - `issue-triage` comments on open PRs with a runx-authored maintainer response
   only after replay and public-value gates pass
+- generated `issue-triage` state-refresh PRs are review surfaces and are not
+  fed back into PR-mode `issue-triage`
 - `fix-pr` turns one bounded bugfix request into a verified draft PR through
   the governed PR runner
 - `docs-pr` turns one bounded explanation or docs request into a docs-only
@@ -152,8 +165,9 @@ The important rule is that receipts stay canonical. Derived context is allowed
 to help the next run, but it must stay rebuildable from evidence.
 
 The concrete mechanism for that is thread teaching: issues and PR threads are
-the canonical teaching layer, while `state/thread-teaching.json` is a
-rebuildable derived cache for runtime context and training.
+the canonical human-authored provider-thread evidence layer, while
+`state/thread-teaching.json` is a rebuildable derived cache and policy/context
+projection for runtime context and training.
 
 ## Remaining Gap
 

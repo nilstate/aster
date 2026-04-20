@@ -44,7 +44,12 @@ jobs:
   issue-triage-issue:
     if: >-
       ${{
-        (github.event_name == 'issues' && !startsWith(github.event.issue.title, '[skill]')) ||
+        (
+          github.event_name == 'issues' &&
+          !startsWith(github.event.issue.title, '[skill]') &&
+          !startsWith(github.event.issue.title, '[collaboration]') &&
+          !contains(github.event.issue.body, 'aster:thread-teaching-record')
+        ) ||
         (github.event_name == 'workflow_dispatch' && inputs.issue_number != '' && inputs.pr_number == '')
       }}
     runs-on: ubuntu-latest
@@ -227,6 +232,7 @@ jobs:
 
       - name: Run issue-triage on issue
         if: ${{ steps.preflight.outputs.enabled == 'true' && steps.issue_mode.outputs.mode == 'triage' && steps.target_scope.outputs.allowed == 'true' && steps.issue_replay_guard.outputs.status == 'run' }}
+        timeout-minutes: 60
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           ISSUE_TITLE: ${{ steps.issue.outputs.title }}
@@ -604,6 +610,7 @@ jobs:
 
       - name: Run issue-triage on PR
         if: ${{ steps.preflight.outputs.enabled == 'true' && steps.target_scope.outputs.allowed == 'true' && steps.pr_policy.outputs.allowed == 'true' && steps.pr_replay_guard.outputs.status == 'run' }}
+        timeout-minutes: 30
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: |

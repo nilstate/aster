@@ -136,6 +136,7 @@ Populated per cycle as each one completes.
 | harness-cli-tool-sandbox-fix | runx harness + scafld | (infra) | packages/harness/src/runner.ts + skills/scafld/run.mjs | Harness now sandboxes cli-tool cwd to tempdir; scafld honors RUNX_CWD. Unlocks full-chain harness cases. | 0 | — |
 | dogfood-cycle-9-issue-to-pr-full-chain | issue-to-pr | needs_update | issue-to-pr 0.1.1 → 0.1.2; +full-chain harness case | First full-chain harness case: chain executes all 15 steps through scafld-complete with status success | 480 | [.artifacts/dogfood-cycles/dogfood-cycle-9-issue-to-pr-full-chain/](../.artifacts/dogfood-cycles/dogfood-cycle-9-issue-to-pr-full-chain/) |
 | dogfood-cycle-10-sweep-final | skill-testing + sourcey | needs_update | +1 harness case per skill | Closes round-2 coverage floor: every catalog X.yaml has ≥2 passing cases | 0 | [.artifacts/dogfood-cycles/dogfood-cycle-10-sweep-final/](../.artifacts/dogfood-cycles/dogfood-cycle-10-sweep-final/) |
+| dogfood-round-3-real-traffic | 4 real invocations | pass | +4 persistent receipts, 5359 bytes | research + skill-recon + objective-decompose + evaluate-skill each produced actionable findings with persisted receipts. 3 follow-up specs queued. | 5359 | [.artifacts/dogfood-cycles/dogfood-round-3-real-traffic/](../.artifacts/dogfood-cycles/dogfood-round-3-real-traffic/) |
 
 ## Platform pressure signals
 
@@ -145,9 +146,9 @@ truth for the platform-next-move decision.
 
 | Signal | Current value | Threshold for governed receipts | Threshold for hosted memory |
 | --- | --- | --- | --- |
-| Total receipts | 6 | receipt search/replay would materially reduce review time | — |
-| Total receipt bytes | 7340 | — | local store starts hitting IO or concurrency pressure |
-| Distinct subject identities | 5 (improve-skill, receipt-review, harness-author, skill-recon, issue-to-pr) | — | cross-session context lookups become common |
+| Total receipts | 10 | receipt search/replay would materially reduce review time | — |
+| Total receipt bytes | 12699 | — | local store starts hitting IO or concurrency pressure |
+| Distinct subject identities | 9 (improve-skill, receipt-review, harness-author, skill-recon, issue-to-pr, research, objective-decompose, evaluate-skill, market-intelligence) | — | cross-session context lookups become common |
 | Manual receipt scrolls / week | 0 | governed receipts search wins | — |
 
 Latest end-to-end receipt: `rx_0df2fb9885bf4b67b4c8bc6f3d1204ad`
@@ -245,3 +246,43 @@ fixture; extending it to full-chain would follow the cycle-9
 pattern). Before round 3, the priority is running real `runx
 <skill>` invocations to pump the pressure-signal numbers and
 inform the governed-receipts-vs-hosted-memory decision.
+
+## Round 3 — close note
+
+Round 3 executed `dogfood-round-3-real-traffic`: four real runx
+skill invocations with honest operator-authored answers to each
+cognitive-work request. Every invocation persisted a receipt to
+`aster/.runx/receipts/`.
+
+- **research** (`rx_17a9f0de…`) — produced a platform-decision
+  brief. Primary finding: defer both governed receipts and
+  hosted memory; set a review checkpoint at ~30 persistent
+  receipts or ~10 distinct subjects.
+- **skill-recon** (`rx_d50c2a0a…`) — recommended extending the
+  existing `runx history` CLI with filter flags rather than
+  building a separate receipt-search surface. Reuses the filter
+  primitives already in `export-receipts`.
+- **objective-decompose** (`rx_dc720d86…`) — decomposed
+  "fail-closed on unresolved production runs" into three steps:
+  classify-run-context, gate-on-unresolved-requests, ergonomic
+  `--allow-pause` opt-out.
+- **evaluate-skill** (`rx_04739717…`) — rated `receipt-review`
+  tier-2. Weaknesses: no CLI fallback, no partial-success
+  taxonomy class, no runtime output-schema validation.
+
+Pressure signals after round 3: **10 persistent receipts, 12699
+bytes, 9 distinct subjects.** Still below the round-3 research
+brief's own ~30-receipt / ~10-subject threshold. The
+governed-receipts-vs-hosted-memory decision remains deferred,
+now with documented operator-authored evidence backing the
+deferral.
+
+Three actionable follow-up drafts are queued from round 3:
+
+1. Extend `runx history` with `--skill`, `--status`, `--subject`,
+   `--since`, `--until` filter flags (from skill-recon).
+2. Fail-closed policy for unresolved production runs via
+   `RUNX_PRODUCTION` env or `--production` flag (from
+   objective-decompose).
+3. Codify `receipt-review` output as JSON Schema and validate at
+   runtime (from evaluate-skill).

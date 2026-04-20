@@ -1,0 +1,218 @@
+spec_version: "1.1"
+task_id: "dogfood-round-3-real-traffic"
+created: "2026-04-20T14:54:07Z"
+updated: "2026-04-20T15:01:50Z"
+status: "completed"
+harden_status: "not_run"
+
+task:
+  title: "Dogfood round 3: real skill invocations for pressure signals"
+  summary: >
+    Rounds 1-2 focused on catalog coverage and harness fixtures.
+    That work surfaced campaign-internal defects but did not
+    meaningfully move the governed-receipts-vs-hosted-memory
+    pressure signal, because harness runs live in ephemeral
+    sandboxes and do not persist receipts.
+
+    Round 3 runs real runx skill invocations against real aster /
+    runx questions, persisting receipts to the repo-local
+    .runx/receipts/ tree. Each invocation answers a concrete
+    question the operator actually cares about, producing a real
+    receipt and a real artefact. The cumulative traffic sharpens
+    the platform-next-move signal.
+
+    Four real invocations are planned: research (platform decision
+    evidence), skill-recon (receipt-search-CLI feasibility),
+    objective-decompose (a concrete governance-hardening task),
+    and evaluate-skill (rate one of the skills dogfooded in
+    rounds 1-2). The caller answers come from honest analysis,
+    not canned stubs.
+  size: "medium"
+  risk_level: "low"
+  context:
+    packages:
+      - ".runx/receipts"
+      - ".artifacts/dogfood-cycles"
+      - "docs"
+    files_impacted:
+      - path: ".artifacts/dogfood-cycles/dogfood-round-3-real-traffic/"
+        lines: "all"
+        reason: "Per-invocation evidence bundle."
+      - path: "docs/dogfood.md"
+        lines: "as-needed"
+        reason: "Cycle log + pressure-signals update."
+    invariants:
+      - "real_invocations_only"
+      - "receipts_persisted_to_disk"
+      - "answers_are_honest_not_stubbed"
+    related_docs:
+      - "docs/dogfood.md"
+    cwd: "/home/kam/dev/aster"
+  objectives:
+    - "Run research on a concrete aster/runx question and persist the receipt."
+    - "Run skill-recon on a concrete design question and persist the receipt."
+    - "Run objective-decompose on a concrete engineering task and persist the receipt."
+    - "Run evaluate-skill against one round-1 skill and persist the receipt."
+    - "Aggregate the new pressure-signal totals in docs/dogfood.md."
+    - "Record which invocations produced actionable follow-ups."
+  scope:
+    in_scope:
+      - "Invoking real runx skills via the runx CLI."
+      - "Providing honest agent answers to cognitive-work requests."
+      - "Capturing run ids and receipt paths per invocation."
+      - "Updating docs/dogfood.md pressure signals."
+    out_of_scope:
+      - "Editing skills, harness cases, or runx kernel."
+      - "External-visible actions (no PRs, no issues)."
+      - "Full chain skills that would take more than one cycle to answer."
+  dependencies:
+    - "runx CLI available and globally linked."
+    - "Round-2 close verified (every catalog skill has passing harness)."
+  assumptions:
+    - "Persisted receipts accumulate in .runx/receipts/ relative to the invocation's cwd."
+    - "Real answers to cognitive-work requests are possible because the session operator (me) has working knowledge of aster and runx."
+  touchpoints:
+    - area: "real-use receipts"
+      description: "Four real runx runs persisting receipts."
+      owners: ["aster", "runx"]
+    - area: "platform decision"
+      description: "Pressure-signals table updated."
+      owners: ["aster"]
+  risks:
+    - description: "A chosen objective is too large for one invocation and the chain halts partway."
+      impact: "low"
+      mitigation: "Pick bounded single-skill invocations. If halted, record the halt as a signal and move on."
+    - description: "Receipts persist to a CWD-relative dir that drifts across invocations."
+      impact: "low"
+      mitigation: "Run every invocation from /home/kam/dev/aster so receipts pool under aster/.runx/receipts/."
+  acceptance:
+    validation_profile: "standard"
+    definition_of_done:
+      - id: "dod1"
+        description: "At least four real receipts persisted under aster/.runx/receipts/."
+        status: "pending"
+      - id: "dod2"
+        description: "Each invocation has an evidence sub-bundle under the cycle folder."
+        status: "pending"
+      - id: "dod3"
+        description: "docs/dogfood.md pressure signals reflect new totals."
+        status: "pending"
+      - id: "dod4"
+        description: "Per-invocation actionable follow-ups (if any) recorded."
+        status: "pending"
+    validation:
+      - id: "v1"
+        type: "boundary"
+        description: "At least four receipt files exist in aster/.runx/receipts/."
+        command: "bash -c 'n=$(find .runx/receipts -maxdepth 2 -name \"rx_*.json\" 2>/dev/null | wc -l); [ \"$n\" -ge 4 ] && echo ok || echo \"fail: $n\"'"
+        expected: "ok"
+      - id: "v2"
+        type: "documentation"
+        description: "docs/dogfood.md references round 3 at least twice."
+        command: "bash -c 'n=$(grep -c dogfood-round-3-real-traffic docs/dogfood.md); [ \"$n\" -ge 2 ] && echo ok || echo fail'"
+        expected: "ok"
+      - id: "v3"
+        type: "boundary"
+        description: "Cycle evidence folder has a summary.json aggregating all four runs."
+        command: "bash -c '[ -s .artifacts/dogfood-cycles/dogfood-round-3-real-traffic/summary.json ] && echo ok || echo fail'"
+        expected: "ok"
+  constraints:
+    approvals_required: []
+    non_goals:
+      - "No external PRs"
+      - "No skill edits"
+      - "No kernel changes"
+
+planning_log:
+  - timestamp: "2026-04-20T14:54:07Z"
+    actor: "agent"
+    summary: "Authored round 3 to move past harness-only dogfood and generate real receipt pressure."
+
+  - timestamp: "2026-04-20T14:55:04Z"
+    actor: "cli"
+    summary: "Spec approved"
+  - timestamp: "2026-04-20T14:55:04Z"
+    actor: "cli"
+    summary: "Execution started"
+  - timestamp: "2026-04-20T15:01:50Z"
+    actor: "cli"
+    summary: "Spec completed"
+phases:
+  - id: "phase1"
+    name: "Run four real invocations"
+    objective: "Execute each skill on its concrete question; persist receipts; capture per-run artefacts."
+    changes:
+      - file: ".artifacts/dogfood-cycles/dogfood-round-3-real-traffic/research/"
+        action: "create"
+        lines: "all"
+      - file: ".artifacts/dogfood-cycles/dogfood-round-3-real-traffic/skill-recon/"
+        action: "create"
+        lines: "all"
+      - file: ".artifacts/dogfood-cycles/dogfood-round-3-real-traffic/objective-decompose/"
+        action: "create"
+        lines: "all"
+      - file: ".artifacts/dogfood-cycles/dogfood-round-3-real-traffic/evaluate-skill/"
+        action: "create"
+        lines: "all"
+    acceptance_criteria:
+      - id: "ac1_1"
+        type: "boundary"
+        description: "Per-skill subfolders contain at least a receipt.json + run_metadata.json."
+        command: "bash -c 'd=.artifacts/dogfood-cycles/dogfood-round-3-real-traffic; ok=1; for s in research skill-recon objective-decompose evaluate-skill; do [ -s \"$d/$s/receipt.json\" ] || ok=0; done; [ $ok -eq 1 ] && echo ok || echo fail'"
+        expected: "ok"
+        result: "pass"
+        executed_at: "2026-04-20T15:01:14Z"
+        result_output: "ok"
+    status: "pending"
+
+  - id: "phase2"
+    name: "Aggregate + update pressure signals"
+    objective: "Write summary.json + update docs/dogfood.md pressure-signals table."
+    dependencies: ["phase1"]
+    changes:
+      - file: ".artifacts/dogfood-cycles/dogfood-round-3-real-traffic/summary.json"
+        action: "create"
+        lines: "all"
+      - file: "docs/dogfood.md"
+        action: "update"
+        lines: "as-needed"
+    acceptance_criteria:
+      - id: "ac2_1"
+        type: "documentation"
+        description: "docs/dogfood.md references round 3 at least twice."
+        command: "bash -c 'n=$(grep -c dogfood-round-3-real-traffic docs/dogfood.md); [ \"$n\" -ge 2 ] && echo ok || echo fail'"
+        expected: "ok"
+        result: "pass"
+        executed_at: "2026-04-20T15:01:14Z"
+        result_output: "ok"
+    status: "pending"
+
+rollback:
+  strategy: "per_phase"
+  commands:
+    phase1: "rm -rf .artifacts/dogfood-cycles/dogfood-round-3-real-traffic"
+    phase2: "git checkout HEAD -- docs/dogfood.md"
+
+review:
+  timestamp: "2026-04-20T15:01:21Z"
+  verdict: "pass"
+  review_rounds: 1
+  reviewer_mode: "executor"
+  reviewer_session: ""
+  round_status: "completed"
+  override_applied: false
+  override_reason: null
+  override_confirmed_at: null
+  passes:
+    - id: spec_compliance
+      result: "pass"
+    - id: scope_drift
+      result: "pass"
+    - id: regression_hunt
+      result: "pass"
+    - id: convention_check
+      result: "pass"
+    - id: dark_patterns
+      result: "pass"
+  blocking_count: 0
+  non_blocking_count: 0

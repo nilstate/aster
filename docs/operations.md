@@ -108,6 +108,9 @@ Thread teaching is the canonical human-teaching layer:
   reviewers can inspect the current pass directly
 - generic low-signal completions remain in `state/evidence-projections.json`
   for runtime context and training instead of inflating public markdown surfaces
+- if a derive run only compacts `state/evidence-projections.json` and produces
+  zero public projection deltas, the rolling PR is treated as a semantic noop
+  and closed instead of reopening for learned-state-only churn
 - merge-watch is read-only against upstream repos. It records PR state, checks,
   merge commit, and upstream blob metadata, then emits an internal
   registry-binding request after merge

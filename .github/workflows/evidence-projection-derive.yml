@@ -71,6 +71,14 @@ jobs:
           cp "$GITHUB_WORKSPACE/state/evidence-projections.json" "$GITHUB_WORKSPACE/.artifacts/evidence-projection-derive/state-evidence-projections.json"
           cat "$GITHUB_WORKSPACE/.artifacts/evidence-projection-derive/latest-batch-summary.md" >> "$GITHUB_STEP_SUMMARY"
 
+      - name: Evaluate rolling publication
+        run: |
+          node scripts/evaluate-evidence-projection-publication.mjs \
+            --repo-root "$GITHUB_WORKSPACE" \
+            --latest-batch "$GITHUB_WORKSPACE/.artifacts/evidence-projection-derive/latest-batch-summary.json" \
+            --output "$GITHUB_WORKSPACE/.artifacts/evidence-projection-derive/publication-decision.json"
+          cat "$GITHUB_WORKSPACE/.artifacts/evidence-projection-derive/publication-decision.json" >> "$GITHUB_STEP_SUMMARY"
+
       - name: Publish rolling draft PR when projections change
         run: |
           cat > "$GITHUB_WORKSPACE/.artifacts/evidence-projection-derive/pr-body.md" <<'EOF'
@@ -91,6 +99,9 @@ jobs:
             --commit-message "state(evidence): refresh evidence projections" \
             --body-file "$GITHUB_WORKSPACE/.artifacts/evidence-projection-derive/pr-body.md" \
             --include-change-summary-in-body \
+            --semantic-noop-file "$GITHUB_WORKSPACE/.artifacts/evidence-projection-derive/publication-decision.json" \
+            --close-existing-if-noop \
+            --delete-remote-branch-if-noop \
             --force-with-lease \
             --lane evidence-projection-derive \
             > "$GITHUB_WORKSPACE/.artifacts/evidence-projection-derive/publish.json"

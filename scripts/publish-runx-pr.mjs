@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 
 import { evaluateLaneChangeSurfacePolicy } from "./change-surface-governance.mjs";
@@ -13,6 +13,43 @@ async function main() {
   const existingPr = findExistingPr(options.repo, options.branch);
   const remoteLease = ensureRemoteLease(options.branch);
   const ownerRepo = options.ownerRepo ?? process.env.GITHUB_REPOSITORY ?? "nilstate/aster";
+  const semanticNoop = readSemanticNoopDecision(options.semanticNoopFile);
+
+  if (semanticNoop?.status === "noop") {
+    const closedPr = closeExistingPrIfRequested({
+      repo: options.repo,
+      existingPr,
+      closeExistingIfNoop: options.closeExistingIfNoop,
+      deleteRemoteBranchIfNoop: options.deleteRemoteBranchIfNoop,
+      branch: options.branch,
+      remoteLease,
+      noopReason: firstString(semanticNoop.reason) || "semantic_noop",
+    });
+
+    process.stdout.write(
+      `${JSON.stringify(
+        {
+          status: "noop",
+          reason: firstString(semanticNoop.reason) || "semantic_noop",
+          pr_number: existingPr?.number ?? null,
+          pr_url: existingPr?.url ?? null,
+          closed_pr_number: closedPr?.number ?? null,
+          closed_pr_url: closedPr?.url ?? null,
+          remote_branch_deleted: Boolean(closedPr?.remote_branch_deleted),
+          policy: {
+            lane: options.lane,
+            merge_policy: "human_review",
+            draft_only: true,
+          },
+          change_surface_policy: null,
+          semantic_noop: semanticNoop,
+        },
+        null,
+        2,
+      )}\n`,
+    );
+    return;
+  }
 
   if (!hasWorkingTreeChanges()) {
     process.stdout.write(
@@ -208,6 +245,14 @@ function parseArgs(argv) {
       options.closeExistingIfNoop = true;
       continue;
     }
+    if (token === "--delete-remote-branch-if-noop") {
+      options.deleteRemoteBranchIfNoop = true;
+      continue;
+    }
+    if (token === "--semantic-noop-file") {
+      options.semanticNoopFile = requireValue(argv, ++index, token);
+      continue;
+    }
     throw new Error(`Unknown argument: ${token}`);
   }
 
@@ -257,6 +302,10 @@ export function buildPushArgs(branch, remoteLease, options = {}) {
   return ["push", "-u", "origin", branch];
 }
 
+export function buildDeleteRemoteBranchArgs(branch) {
+  return ["push", "origin", "--delete", branch];
+}
+
 export function buildCheckoutArgs(branch, remoteLease) {
   if (remoteLease) {
     return ["checkout", "-B", branch, `refs/remotes/origin/${branch}`];
@@ -281,6 +330,24 @@ export function buildPullRequestUpdateArgs(repo, prNumber) {
     "--input",
     "-",
   ];
+}
+
+export function buildClosePrArgs(repo, prNumber, options = {}) {
+  const args = [
+    "pr",
+    "close",
+    String(prNumber),
+    "--repo",
+    repo,
+  ];
+  if (options.deleteBranch) {
+    args.push("--delete-branch");
+  }
+  const comment = firstString(options.comment);
+  if (comment) {
+    args.push("--comment", comment);
+  }
+  return args;
 }
 
 function updatePullRequest(repo, prNumber, payload) {
@@ -376,6 +443,67 @@ function appendChangeSummaryBlock(body, changeSummary) {
   }
 
   return [existingRemoved, lines.join("\n")].filter(Boolean).join("\n\n").trim();
+}
+
+function readSemanticNoopDecision(filePath) {
+  const resolvedPath = firstString(filePath);
+  if (!resolvedPath || !existsSync(resolvedPath)) {
+    return null;
+  }
+  const payload = JSON.parse(readFileSync(resolvedPath, "utf8"));
+  return payload && typeof payload === "object" ? payload : null;
+}
+
+function closeExistingPrIfRequested({
+  repo,
+  existingPr,
+  closeExistingIfNoop,
+  deleteRemoteBranchIfNoop,
+  branch,
+  remoteLease,
+  noopReason,
+}) {
+  const shouldDeleteRemoteBranch = Boolean(deleteRemoteBranchIfNoop && remoteLease);
+  if (!existingPr) {
+    if (shouldDeleteRemoteBranch) {
+      run("git", buildDeleteRemoteBranchArgs(branch));
+      return {
+        number: null,
+        url: null,
+        remote_branch_deleted: true,
+      };
+    }
+    return null;
+  }
+
+  if (!closeExistingIfNoop) {
+    return {
+      number: existingPr.number,
+      url: existingPr.url,
+      remote_branch_deleted: false,
+    };
+  }
+
+  run("gh", buildClosePrArgs(repo, existingPr.number, {
+    deleteBranch: deleteRemoteBranchIfNoop,
+    comment: buildNoopClosureComment(noopReason),
+  }));
+  return {
+    number: existingPr.number,
+    url: existingPr.url,
+    remote_branch_deleted: Boolean(deleteRemoteBranchIfNoop),
+  };
+}
+
+function buildNoopClosureComment(noopReason) {
+  if (noopReason === "state_only_projection_compaction") {
+    return "Closing this rolling PR because the latest derive run only compacted `state/evidence-projections.json` and produced no public projection changes.";
+  }
+  return "Closing this rolling PR because the latest run was classified as a semantic noop.";
+}
+
+function firstString(value) {
+  return typeof value === "string" && value.trim().length > 0 ? value.trim() : "";
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {

@@ -82,6 +82,8 @@ const required = [
   "scripts/apply-aster-promotions.test.mjs",
   "scripts/derive-evidence-projections.mjs",
   "scripts/derive-evidence-projections.test.mjs",
+  "scripts/evaluate-evidence-projection-publication.mjs",
+  "scripts/evaluate-evidence-projection-publication.test.mjs",
   "scripts/aster-core.mjs",
   "scripts/aster-core.test.mjs",
   "scripts/thread-teaching.mjs",

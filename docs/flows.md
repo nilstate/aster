@@ -47,6 +47,9 @@ Public projection is narrower than runtime memory:
   `reflections/`, and target dossiers
 - generic low-signal rows such as bare `lane finished with success` completions
   stay in evidence state only so the rolling PR remains compact
+- when a derive run only compacts `state/evidence-projections.json` and carries
+  zero public projection deltas, publication is treated as a semantic noop and
+  the rolling PR is closed instead of being reopened for learned-state churn
 
 The rolling branch is reset from `main` on every derive run, then rebuilt from
 artifact evidence and force-pushed as a derived review surface. The PR body and

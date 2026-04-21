@@ -61,6 +61,8 @@ This is the live run catalog for `aster`.
   queue of branch-local merges
 - note: generic low-signal completions remain in state-only projection for
   runtime context and training
+- note: pure `state/evidence-projections.json` compaction with zero public
+  projection deltas is treated as a semantic noop rather than a new rolling PR
 
 ### `fix-pr`
 

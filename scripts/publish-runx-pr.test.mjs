@@ -2,7 +2,9 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import {
+  buildClosePrArgs,
   buildCheckoutArgs,
+  buildDeleteRemoteBranchArgs,
   buildPushArgs,
   buildPullRequestUpdateArgs,
   currentBranchName,
@@ -119,6 +121,34 @@ test("buildPullRequestUpdateArgs uses the REST pull endpoint for existing PRs", 
     "PATCH",
     "--input",
     "-",
+  ]);
+});
+
+test("buildClosePrArgs closes an existing draft PR and deletes the branch when requested", () => {
+  assert.deepEqual(
+    buildClosePrArgs("nilstate/aster", 109, {
+      deleteBranch: true,
+      comment: "semantic noop",
+    }),
+    [
+      "pr",
+      "close",
+      "109",
+      "--repo",
+      "nilstate/aster",
+      "--delete-branch",
+      "--comment",
+      "semantic noop",
+    ],
+  );
+});
+
+test("buildDeleteRemoteBranchArgs removes the rolling remote branch directly", () => {
+  assert.deepEqual(buildDeleteRemoteBranchArgs("runx/evidence-projection-derive"), [
+    "push",
+    "origin",
+    "--delete",
+    "runx/evidence-projection-derive",
   ]);
 });
 

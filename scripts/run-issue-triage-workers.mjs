@@ -275,8 +275,6 @@ async function runWorker({ options, workerRequest, index, verificationCatalog })
       path.join(repoRoot, "scripts", "publish-runx-pr.mjs"),
       "--repo",
       targetRepo,
-      "--issue-repo",
-      options.defaultRepo,
       "--branch",
       branchName,
       "--title",
@@ -287,8 +285,6 @@ async function runWorker({ options, workerRequest, index, verificationCatalog })
       prBodyPath,
       "--lane",
       "issue-triage",
-      "--issue-number",
-      options.issueNumber,
     ], { cwd: workDir });
     await writeFile(path.join(artifactDir, "publish.json"), `${publishJson}\n`);
     const publish = JSON.parse(publishJson);

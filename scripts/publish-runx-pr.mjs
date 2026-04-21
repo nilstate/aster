@@ -163,18 +163,6 @@ async function main() {
     throw new Error(`Could not resolve the published pull request for branch ${options.branch}.`);
   }
 
-  if (options.issueNumber) {
-    run("gh", [
-      "issue",
-      "comment",
-      options.issueNumber,
-      "--repo",
-      options.issueRepo ?? options.repo,
-      "--body",
-      `Opened draft PR for this run: ${pr.url}`,
-    ]);
-  }
-
   process.stdout.write(
     `${JSON.stringify(
       {
@@ -227,14 +215,6 @@ function parseArgs(argv) {
     }
     if (token === "--base") {
       options.base = requireValue(argv, ++index, token);
-      continue;
-    }
-    if (token === "--issue-number") {
-      options.issueNumber = requireValue(argv, ++index, token);
-      continue;
-    }
-    if (token === "--issue-repo") {
-      options.issueRepo = requireValue(argv, ++index, token);
       continue;
     }
     if (token === "--owner-repo") {

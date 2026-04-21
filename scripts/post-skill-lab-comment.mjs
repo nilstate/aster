@@ -11,6 +11,7 @@ export async function main(argv = process.argv.slice(2)) {
     runUrl: options.runUrl,
     publish,
     ledgerRevision: options.ledgerRevision,
+    workflowStatus: options.workflowStatus,
   });
 
   const issue = JSON.parse(
@@ -71,13 +72,13 @@ export async function main(argv = process.argv.slice(2)) {
   process.stdout.write(`${JSON.stringify({ status: "posted" }, null, 2)}\n`);
 }
 
-export function buildSkillLabComment({ objective, runUrl, publish, ledgerRevision }) {
+export function buildSkillLabComment({ objective, runUrl, publish, ledgerRevision, workflowStatus }) {
   const lines = [
     SKILL_LAB_MARKER,
     "## runx skill lab",
     "",
     `- Objective: \`${String(objective ?? "Untitled skill proposal").trim()}\``,
-    `- Status: \`${resolveSkillLabStatus(publish)}\``,
+    `- Status: \`${resolveSkillLabStatus({ publish, workflowStatus })}\``,
   ];
 
   if (publish?.status === "published") {
@@ -92,18 +93,24 @@ export function buildSkillLabComment({ objective, runUrl, publish, ledgerRevisio
 
   lines.push(
     "",
-    "Reply in this issue with amendments, constraints, or teaching notes and skill-lab will refresh the same proposal from the same work ledger.",
+    "Reply in this work issue with maintainer amendments, constraints, or teaching notes and skill-lab will refresh the same proposal from the same work ledger.",
   );
 
   return `${lines.join("\n").trim()}\n`;
 }
 
-function resolveSkillLabStatus(publish) {
+function resolveSkillLabStatus({ publish, workflowStatus }) {
+  if (workflowStatus && workflowStatus !== "success") {
+    return "run_failed";
+  }
   if (!publish || typeof publish !== "object") {
-    return "run_completed";
+    return "proposal_refreshed";
   }
   if (publish.status === "published") {
     return "draft_pr_refreshed";
+  }
+  if (publish.status === "missing" || publish.status === "not_requested") {
+    return "proposal_refreshed";
   }
   return String(publish.status ?? "run_completed");
 }
@@ -149,6 +156,10 @@ function parseArgs(argv) {
     }
     if (token === "--ledger-revision") {
       options.ledgerRevision = requireValue(argv, ++index, token);
+      continue;
+    }
+    if (token === "--workflow-status") {
+      options.workflowStatus = requireValue(argv, ++index, token);
       continue;
     }
     throw new Error(`Unknown argument: ${token}`);

@@ -5,11 +5,12 @@ body:
   - type: markdown
     attributes:
       value: |
-        This issue is the living ledger for one upstream skill contribution.
+        This work issue is the living ledger for one upstream skill contribution.
 
-        Open it once, then amend it by replying in the same thread. The lane
-        will refresh the proposal from this issue, and once the publish gate is
-        approved in this same thread it will update one rolling draft PR.
+        Open it once, then amend it by replying in the same thread. Trusted
+        maintainer replies become maintainer amendments, the lane refreshes the
+        proposal from the same work ledger, and once the publish gate is
+        approved in this same thread it updates one rolling draft PR.
   - type: input
     id: target_repo
     attributes:

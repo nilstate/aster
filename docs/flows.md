@@ -82,9 +82,10 @@ is running and the workflow step carries an explicit timeout.
 Listens for issues whose title begins with `[skill]`, runs
 `objective-to-skill`, materializes the result under `docs/skill-proposals/`,
 opens or refreshes one draft PR with the generated proposal, and posts or
-updates one rolling issue comment back onto the same skill issue. Trusted
-maintainer replies on that issue retrigger skill-lab from the refreshed
-issue-ledger packet so the proposal evolves inside one work thread.
+updates one rolling issue comment back onto the same work issue. Trusted
+maintainer replies on that issue become maintainer amendments and retrigger
+skill-lab from the refreshed work ledger so the proposal evolves inside one
+work thread.
 
 ## `skill-upstream`
 

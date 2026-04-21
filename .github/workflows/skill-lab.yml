@@ -148,6 +148,8 @@ jobs:
           node scripts/prepare-skill-lab-input.mjs \
             --input ".artifacts/skill-lab/issue-ledger.json" \
             --output ".artifacts/skill-lab/request.json"
+          echo "source_repo=$(jq -r '.source_issue.repo // \"\"' .artifacts/skill-lab/request.json)" >> "$GITHUB_OUTPUT"
+          echo "ledger_revision=$(jq -r '.source_issue.ledger_revision // \"\"' .artifacts/skill-lab/request.json)" >> "$GITHUB_OUTPUT"
           echo "objective<<EOF" >> "$GITHUB_OUTPUT"
           jq -r '.objective' .artifacts/skill-lab/request.json >> "$GITHUB_OUTPUT"
           echo "EOF" >> "$GITHUB_OUTPUT"
@@ -209,12 +211,13 @@ jobs:
           cat > .artifacts/skill-lab/pr-body.md <<EOF
           ## Summary
 
-          This draft PR was opened by the \`aster\` skill-lab lane.
+          This draft PR was refreshed by the \`aster\` skill-lab lane from one work issue ledger.
 
-          - Source issue: #${{ steps.issue.outputs.number }}
-          - Issue URL: ${{ steps.issue.outputs.url }}
+          - Work issue: \`${{ steps.request.outputs.source_repo || github.repository }}#${{ steps.issue.outputs.number }}\`
+          - Work issue URL: ${{ steps.issue.outputs.url }}
+          - Ledger revision: \`${{ steps.request.outputs.ledger_revision || steps.issue_ledger.outputs.ledger_revision }}\`
           - Lane: \`objective-to-skill\`
-          - Output: generated proposal under \`docs/skill-proposals/\`
+          - Output: refreshed proposal under \`docs/skill-proposals/\`
 
           ## Validation
 
@@ -260,13 +263,21 @@ jobs:
       - name: Post skill-lab issue update
         if: ${{ always() && steps.preflight.outputs.enabled == 'true' && steps.request.outputs.objective != '' }}
         run: |
-          node scripts/post-skill-lab-comment.mjs \
-            --repo "${{ github.repository }}" \
-            --issue "${{ steps.issue.outputs.number }}" \
-            --objective "${{ steps.request.outputs.objective }}" \
-            --run-url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
-            --publish-json ".artifacts/skill-lab/publish.json" \
-            --ledger-revision "${{ steps.issue_ledger.outputs.ledger_revision }}"
+          set -euo pipefail
+          args=(
+            --repo "${{ github.repository }}"
+            --issue "${{ steps.issue.outputs.number }}"
+            --objective "${{ steps.request.outputs.objective }}"
+            --run-url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            --workflow-status "${{ job.status }}"
+          )
+          if [ -f ".artifacts/skill-lab/publish.json" ]; then
+            args+=(--publish-json ".artifacts/skill-lab/publish.json")
+          fi
+          if [ -n "${{ steps.issue_ledger.outputs.ledger_revision }}" ]; then
+            args+=(--ledger-revision "${{ steps.issue_ledger.outputs.ledger_revision }}")
+          fi
+          node scripts/post-skill-lab-comment.mjs "${args[@]}"
 
       - name: Publish evidence
         if: ${{ always() && steps.preflight.outputs.enabled == 'true' }}

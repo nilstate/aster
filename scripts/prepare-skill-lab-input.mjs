@@ -16,6 +16,7 @@ async function main(argv = process.argv.slice(2)) {
 
 export function prepareSkillLabInput(issue = {}) {
   const sourceIssue = issue?.issue && typeof issue.issue === "object" ? issue.issue : issue;
+  const sourceRepo = normalizeString(issue?.repo) ?? null;
   const amendments = Array.isArray(issue?.amendments)
     ? issue.amendments
     : Array.isArray(issue?.trusted_human_comments)
@@ -44,15 +45,17 @@ export function prepareSkillLabInput(issue = {}) {
     whyItMatters ? `Why It Matters\n${whyItMatters}` : null,
     constraints ? `Constraints\n${constraints}` : null,
     evidence ? `Evidence\n${evidence}` : null,
-    amendments.length > 0 ? `Issue Ledger Amendments\n${formatAmendments(amendments)}` : null,
+    amendments.length > 0 ? `Maintainer Amendments\n${formatAmendments(amendments)}` : null,
     notes ? `Additional Notes\n${notes}` : null,
   ].filter(Boolean);
 
   return {
     source_issue: {
+      repo: sourceRepo,
       number: sourceIssue.number ?? null,
       title: rawTitle,
       url: normalizeString(sourceIssue.url) ?? null,
+      ledger_revision: normalizeString(issue?.ledger_revision) ?? null,
     },
     raw_title: rawTitle,
     objective,

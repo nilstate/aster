@@ -126,10 +126,11 @@ That progression should be gradual:
   only after replay and public-value gates pass
 - `issue-triage` and `skill-lab` emit canonical promotion packets inside
   uploaded workflow artifacts rather than mutating repo-owned memory directly
-- `skill-lab` follows the same one-thread model: the skill issue is the living
-  ledger, trusted maintainer replies retrigger the lane, the proposal draft PR
-  is refreshed from that ledger, and one rolling machine comment stays attached
-  to the issue
+- `skill-lab` follows the same one-thread model: the work issue is the living
+  ledger for skill proposal work, and trusted maintainer replies become
+  maintainer amendments that
+  retrigger the lane, the proposal draft PR is refreshed from that work
+  ledger, and one rolling machine comment stays attached to the issue
 - `fix-pr`, `docs-pr`, and `skill-upstream` follow that same one-thread model:
   the work issue carries the initial request, maintainer amendments, publish
   authorization, and rolling machine status while the lane refreshes one draft

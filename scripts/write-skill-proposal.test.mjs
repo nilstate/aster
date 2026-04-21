@@ -29,6 +29,11 @@ test("buildSkillProposalMarkdown preserves issue rationale and evidence", () => 
       ],
     },
     issuePacket: {
+      source_issue: {
+        repo: "nilstate/aster",
+        number: 42,
+        ledger_revision: "deadbeefcafebabe",
+      },
       sections: {
         why_it_matters: "Issue review should train the operator.",
         constraints: "- proposal only",
@@ -39,6 +44,9 @@ test("buildSkillProposalMarkdown preserves issue rationale and evidence", () => 
   });
 
   assert.match(markdown, /^title: "issue-ledger-recap"$/m);
+  assert.match(markdown, /## Work Ledger/);
+  assert.match(markdown, /Work issue: `nilstate\/aster#42`/);
+  assert.match(markdown, /Ledger revision: `deadbeefcafebabe`/);
   assert.match(markdown, /## Why It Matters/);
   assert.match(markdown, /Issue review should train the operator\./);
   assert.match(markdown, /## Evidence/);

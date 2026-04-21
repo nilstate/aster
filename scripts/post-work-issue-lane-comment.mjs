@@ -94,7 +94,7 @@ export function buildWorkIssueLaneComment({
     ledgerRevision ? `- Ledger revision: \`${ledgerRevision}\`` : null,
     runUrl ? `- Workflow run: ${runUrl}` : null,
     "",
-    "Reply in this issue with amendments, constraints, or teaching notes and rerun the lane from the same work ledger.",
+    "Reply in this work issue with maintainer amendments, constraints, or teaching notes and rerun the lane from the same work ledger.",
   ].filter(Boolean);
   return `${lines.join("\n").trim()}\n`;
 }

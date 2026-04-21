@@ -47,7 +47,7 @@ test("prepareWorkIssueRequest normalizes one work issue into a governed PR reque
   assert.equal(prepared.target_repo, "nilstate/aster");
   assert.equal(prepared.source_issue.repo, "nilstate/aster");
   assert.match(prepared.request_body, /Acceptance Criteria/);
-  assert.match(prepared.request_body, /Issue Ledger Amendments/);
+  assert.match(prepared.request_body, /Maintainer Amendments/);
   assert.match(prepared.request_body, /retrigger the lane/);
   assert.equal(prepared.source_issue.ledger_revision, "deadbeefcafebabe");
 });

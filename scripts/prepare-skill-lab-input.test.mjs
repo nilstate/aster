@@ -5,6 +5,8 @@ import { prepareSkillLabInput } from "./prepare-skill-lab-input.mjs";
 
 test("prepareSkillLabInput normalizes GitHub issue form sections", () => {
   const prepared = prepareSkillLabInput({
+    repo: "nilstate/aster",
+    ledger_revision: "deadbeefcafebabe",
     number: 42,
     title: "[skill] Add an issue-ledger recap skill",
     url: "https://github.com/nilstate/aster/issues/42",
@@ -33,6 +35,8 @@ test("prepareSkillLabInput normalizes GitHub issue form sections", () => {
     prepared.objective,
     "Add an issue-ledger recap skill that turns issue discussion into a bounded approval summary.",
   );
+  assert.equal(prepared.source_issue.repo, "nilstate/aster");
+  assert.equal(prepared.source_issue.ledger_revision, "deadbeefcafebabe");
   assert.match(prepared.project_context, /Why It Matters/);
   assert.match(prepared.project_context, /proposal only/);
   assert.equal(prepared.sections.evidence, "- state/thread-teaching.json\n- docs/philosophy.md");
@@ -91,7 +95,7 @@ test("prepareSkillLabInput includes issue-ledger amendments in project context",
     ],
   });
 
-  assert.match(prepared.project_context, /Issue Ledger Amendments/);
+  assert.match(prepared.project_context, /Maintainer Amendments/);
   assert.match(prepared.project_context, /Keep the first pass proposal-only/);
   assert.match(prepared.project_context, /structured teaching: approval/);
 });

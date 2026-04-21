@@ -48,6 +48,12 @@ export function buildSkillProposalMarkdown({ payload, title, issueUrl, issuePack
   const acceptanceChecks = formatAcceptanceChecks(payload.acceptance_checks);
 
   const sourceSections = issuePacket?.sections ?? {};
+  const workIssueRepo = firstNonEmptyString(issuePacket?.source_issue?.repo);
+  const workIssueNumber = normalizeWorkIssueNumber(issuePacket?.source_issue?.number);
+  const workIssueRef = workIssueRepo && workIssueNumber
+    ? `${workIssueRepo}#${workIssueNumber}`
+    : null;
+  const ledgerRevision = firstNonEmptyString(issuePacket?.source_issue?.ledger_revision);
   const lines = [
     "---",
     `title: ${yamlString(proposalTitle)}`,
@@ -56,7 +62,12 @@ export function buildSkillProposalMarkdown({ payload, title, issueUrl, issuePack
     "",
     `# ${proposalTitle}`,
     "",
-    `Source issue: ${issueUrl ?? "n/a"}`,
+    "## Work Ledger",
+    "",
+    workIssueRef ? `- Work issue: \`${workIssueRef}\`` : null,
+    `- Work issue URL: ${issueUrl ?? "n/a"}`,
+    ledgerRevision ? `- Ledger revision: \`${ledgerRevision}\`` : null,
+    "- Maintainer amendments stay on the same work issue thread.",
     "",
     "## Objective",
     "",
@@ -187,6 +198,16 @@ function firstNonEmptyString(...values) {
     if (typeof value === "string" && value.trim().length > 0) {
       return value.trim();
     }
+  }
+  return null;
+}
+
+function normalizeWorkIssueNumber(value) {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return String(value);
+  }
+  if (typeof value === "string" && value.trim().length > 0) {
+    return value.trim();
   }
   return null;
 }

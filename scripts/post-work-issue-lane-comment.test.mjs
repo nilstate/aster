@@ -21,7 +21,7 @@ test("buildWorkIssueLaneComment renders a rolling work-lane status comment", () 
   assert.match(comment, /aster:runx-work-lane:docs-pr/);
   assert.match(comment, /Draft PR: \[#120\]/);
   assert.match(comment, /Ledger revision: `deadbeefcafebabe`/);
-  assert.match(comment, /Reply in this issue with amendments/);
+  assert.match(comment, /Reply in this work issue with maintainer amendments/);
 });
 
 test("buildWorkIssueLaneComment uses proposal_refreshed for non-published upstream runs", () => {

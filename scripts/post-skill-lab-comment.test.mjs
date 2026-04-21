@@ -8,6 +8,7 @@ test("buildSkillLabComment renders the rolling issue status comment", () => {
     objective: "Add an issue-ledger distillation skill",
     runUrl: "https://github.com/nilstate/aster/actions/runs/123",
     ledgerRevision: "deadbeefcafebabe",
+    workflowStatus: "success",
     publish: {
       status: "published",
       pr_number: 111,
@@ -18,5 +19,14 @@ test("buildSkillLabComment renders the rolling issue status comment", () => {
   assert.match(comment, new RegExp(SKILL_LAB_MARKER.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
   assert.match(comment, /Draft PR: \[#111\]/);
   assert.match(comment, /Ledger revision: `deadbeefcafebabe`/);
-  assert.match(comment, /Reply in this issue with amendments/);
+  assert.match(comment, /Reply in this work issue with maintainer amendments/);
+});
+
+test("buildSkillLabComment reports a failed run consistently", () => {
+  const comment = buildSkillLabComment({
+    objective: "Add an issue-ledger distillation skill",
+    workflowStatus: "failure",
+  });
+
+  assert.match(comment, /Status: `run_failed`/);
 });

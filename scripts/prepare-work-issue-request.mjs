@@ -49,7 +49,7 @@ export function prepareWorkIssueRequest(issue = {}, options = {}) {
     sections.context ? `Context\n${sections.context}` : null,
     sections.safety ? `Safety Constraints\n${sections.safety}` : null,
     sections.evidence ? `Evidence\n${sections.evidence}` : null,
-    amendments.length > 0 ? `Issue Ledger Amendments\n${formatAmendments(amendments)}` : null,
+    amendments.length > 0 ? `Maintainer Amendments\n${formatAmendments(amendments)}` : null,
     sections.notes ? `Additional Notes\n${sections.notes}` : null,
   ].filter(Boolean);
 

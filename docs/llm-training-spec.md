@@ -48,6 +48,21 @@ The live work-issue ledger is the bounded runtime context for issue-driven
 lanes. The issue thread remains canonical human evidence; any derived memory or
 policy state must remain rebuildable from that thread plus workflow receipts.
 
+## Shared Work-Ledger Vocabulary
+
+All issue-driven and skill-driven lanes should use the same nouns:
+
+- `work issue`: the canonical human thread for one unit of work
+- `work ledger`: the bounded runtime snapshot derived from that work issue
+- `maintainer amendment`: a trusted human reply on the work issue that changes context or scope
+- `proposal_refreshed`: the lane updated the proposal state from the same work ledger
+- `draft_pr_refreshed`: the lane updated one rolling draft PR from the same work ledger
+- `publish authorization`: an explicit thread-teaching record on the same work issue that allows `<lane>.publish`
+
+Generated comments, PR bodies, proposal markdown, and issue templates should
+prefer these terms over ad hoc alternatives such as `source issue` or
+standalone `reply to rerun` phrasing that hides the ledger model.
+
 ## Opportunity labels
 
 Every candidate opportunity is labeled with:

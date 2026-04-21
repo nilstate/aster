@@ -7,4 +7,4 @@ Each proposal should contain:
 
 - one markdown summary for humans
 - one raw JSON packet for exact machine output
-- a backlink to the issue that requested the capability
+- a backlink to the work issue that requested the capability

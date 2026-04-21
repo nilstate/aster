@@ -570,8 +570,8 @@ function buildPrBody({
 
 This draft PR was opened by the \`aster\` issue triage lane.
 
-- Source issue: #${issueNumber}
-- Issue URL: ${issueUrl}
+- Work issue: #${issueNumber}
+- Work issue URL: ${issueUrl}
 - Target repo: \`${targetRepo}\`
 - Worker: \`${workerNumber}\`
 - Lane: \`support-triage -> issue-triage -> issue-to-pr worker\`

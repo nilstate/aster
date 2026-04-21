@@ -33,9 +33,9 @@ jobs:
     env:
       GH_TOKEN: ${{ secrets.ASTER_GH_TOKEN != '' && secrets.ASTER_GH_TOKEN || github.token }}
       RUNX_CALLER_MODEL: ${{ vars.RUNX_CALLER_SKILL_LAB_MODEL || vars.RUNX_CALLER_MODEL || 'gpt-5.4' }}
-      RUNX_CALLER_REASONING_EFFORT: ${{ vars.RUNX_CALLER_SKILL_LAB_REASONING_EFFORT || vars.RUNX_CALLER_REASONING_EFFORT || 'high' }}
+      RUNX_CALLER_REASONING_EFFORT: ${{ vars.RUNX_CALLER_SKILL_LAB_REASONING_EFFORT || vars.RUNX_CALLER_REASONING_EFFORT || 'medium' }}
       RUNX_CALLER_MAX_ATTEMPTS: ${{ vars.RUNX_CALLER_SKILL_LAB_MAX_ATTEMPTS || vars.RUNX_CALLER_MAX_ATTEMPTS || '3' }}
-      RUNX_CALLER_REQUEST_TIMEOUT_MS: ${{ vars.RUNX_CALLER_SKILL_LAB_REQUEST_TIMEOUT_MS || vars.RUNX_CALLER_REQUEST_TIMEOUT_MS || '900000' }}
+      RUNX_CALLER_REQUEST_TIMEOUT_MS: ${{ vars.RUNX_CALLER_SKILL_LAB_REQUEST_TIMEOUT_MS || vars.RUNX_CALLER_REQUEST_TIMEOUT_MS || '420000' }}
     steps:
       - name: Check lane prerequisites
         id: preflight
@@ -153,6 +153,9 @@ jobs:
             --issue-url "${{ steps.issue.outputs.url }}" \
             --receipt-dir "$GITHUB_WORKSPACE/.artifacts/skill-lab/receipts" \
             --trace-dir "$GITHUB_WORKSPACE/.artifacts/skill-lab/provider-trace" \
+            --max-history 1 \
+            --max-reflections 1 \
+            --max-artifacts 2 \
             --output "$GITHUB_WORKSPACE/.artifacts/skill-lab/result.json" \
             -- \
             skill "$GITHUB_WORKSPACE/.runx/runx/skills/objective-to-skill" \

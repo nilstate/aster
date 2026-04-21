@@ -524,6 +524,15 @@ function buildChatCompletionsPayload({ model, messages }) {
 
 function postJson(url, { headers, body, timeoutMs }) {
   return new Promise((resolve, reject) => {
+    let settled = false;
+    const finish = (handler, value) => {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      clearDeadline();
+      handler(value);
+    };
     const request = https.request(
       url,
       {
@@ -537,25 +546,33 @@ function postJson(url, { headers, body, timeoutMs }) {
           raw += chunk;
         });
         response.on("end", () => {
-          resolve({
+          finish(resolve, {
             statusCode: response.statusCode ?? 0,
             statusMessage: response.statusMessage ?? "",
             body: raw,
           });
         });
-        response.on("error", reject);
+        response.on("error", (error) => finish(reject, error));
       },
     );
 
-    request.setTimeout(timeoutMs, () => {
+    const clearDeadline = armWallClockTimeout(timeoutMs, () => {
       const error = new Error(`OpenAI request timed out after ${timeoutMs}ms.`);
       error.code = "ETIMEDOUT";
       request.destroy(error);
     });
-    request.on("error", reject);
+    request.on("error", (error) => finish(reject, error));
     request.write(body);
     request.end();
   });
+}
+
+export function armWallClockTimeout(timeoutMs, onTimeout) {
+  if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) {
+    return () => {};
+  }
+  const timer = setTimeout(onTimeout, timeoutMs);
+  return () => clearTimeout(timer);
 }
 
 export function buildInputMessages(request, expectedOutputs, previousFailure, contextText) {

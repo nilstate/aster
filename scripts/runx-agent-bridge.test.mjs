@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import {
+  armWallClockTimeout,
   buildLiveTraceState,
   gateSelectorMatches,
   inferTraceHeartbeatIntervalMs,
@@ -44,6 +45,28 @@ test("inferTraceHeartbeatIntervalMs stays bounded for hosted requests", () => {
   assert.equal(inferTraceHeartbeatIntervalMs(Number.NaN), 15000);
 });
 
+test("armWallClockTimeout fires once unless cleared", async () => {
+  let fired = 0;
+  const clear = armWallClockTimeout(20, () => {
+    fired += 1;
+  });
+
+  await sleep(40);
+  clear();
+  assert.equal(fired, 1);
+});
+
+test("armWallClockTimeout can be cancelled before the deadline", async () => {
+  let fired = 0;
+  const clear = armWallClockTimeout(40, () => {
+    fired += 1;
+  });
+
+  clear();
+  await sleep(60);
+  assert.equal(fired, 0);
+});
+
 test("buildLiveTraceState renders a stable live trace snapshot", () => {
   const snapshot = buildLiveTraceState({
     requestId: "resolve-comment",
@@ -73,3 +96,7 @@ test("buildLiveTraceState renders a stable live trace snapshot", () => {
   assert.deepEqual(snapshot.expected_output_keys, ["comment_body", "should_post"]);
   assert.equal(snapshot.note, "still waiting");
 });
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}

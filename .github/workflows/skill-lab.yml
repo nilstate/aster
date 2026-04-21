@@ -44,6 +44,9 @@ jobs:
           github.event.issue.pull_request == null &&
           github.event.comment.user.type != 'Bot' &&
           contains(fromJson('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association) &&
+          !contains(github.event.comment.body, '<!-- aster:runx-skill-lab -->') &&
+          !contains(github.event.comment.body, '<!-- aster:runx-issue-triage -->') &&
+          !contains(github.event.comment.body, '<!-- aster:runx-work-lane:') &&
           startsWith(github.event.issue.title, '[skill]')
         )
       }}

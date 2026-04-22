@@ -9,7 +9,7 @@ test("evaluateSkillProposalQuality passes a crisp first-party proposal", () => {
       execution: {
         stdout: JSON.stringify({
           skill_spec: {
-            name: "decision-brief",
+            skill_name: "decision-brief",
             summary: "Read one living work ledger and return one bounded maintainer decision packet.",
           },
           pain_points: [
@@ -37,9 +37,52 @@ test("evaluateSkillProposalQuality passes a crisp first-party proposal", () => {
   });
 
   assert.equal(evaluation.status, "pass");
+  assert.equal(evaluation.checks.proposal_named, true);
   assert.equal(evaluation.checks.pain_points_explicit, true);
   assert.equal(evaluation.checks.catalog_overlap_explained, true);
   assert.equal(evaluation.findings.length, 0);
+});
+
+test("evaluateSkillProposalQuality ignores natural-language placeholder mentions", () => {
+  const evaluation = evaluateSkillProposalQuality({
+    report: {
+      execution: {
+        stdout: JSON.stringify({
+          skill_spec: {
+            skill_name: "decision-brief",
+            summary: "Return one decision packet from one living ledger.",
+          },
+          pain_points: ["Maintainers need one next-step packet."],
+          catalog_fit: {
+            adjacent_skills: ["issue-triage"],
+            why_new: "This is narrower than issue triage.",
+          },
+          maintainer_decisions: [{ question: "Accept the skill?" }],
+          acceptance_checks: [{ id: "ac-1" }, { id: "ac-2" }, { id: "ac-3" }],
+          harness_fixture: [
+            {
+              target: "../decision-brief",
+              inputs: {
+                subject_memory: {
+                  thread: {
+                    comments: [
+                      {
+                        body: "Remove builder residue and placeholder language.",
+                      },
+                    ],
+                  },
+                },
+              },
+            },
+          ],
+        }),
+      },
+    },
+    catalogEntries: ["issue-triage"],
+  });
+
+  assert.equal(evaluation.checks.placeholder_free, true);
+  assert.equal(evaluation.status, "pass");
 });
 
 test("evaluateSkillProposalQuality flags builder residue and missing catalog fit", () => {

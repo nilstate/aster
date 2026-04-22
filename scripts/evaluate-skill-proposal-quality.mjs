@@ -65,12 +65,12 @@ export function evaluateSkillProposalQuality({ report, issuePacket = null, catal
   const residueHits = residuePatterns
     .filter(({ pattern }) => pattern.test(proposalText))
     .map(({ id, message }) => ({ id, message }));
-  const placeholderFree = !/\b(?:UNRESOLVED_[A-Z0-9_]+|TBD|placeholder)\b/i.test(proposalText);
+  const placeholderFree = !/\bUNRESOLVED_[A-Z0-9_]+\b|\bTBD\b|placeholder target|placeholder_value/i.test(proposalText);
   const catalogMentions = new Set(
     catalogEntries.filter((name) => new RegExp(`\\b${escapeRegExp(name)}\\b`, "i").test(catalogFitText)),
   );
   const checks = {
-    proposal_named: Boolean(firstNonEmptyString(skillSpec.name)),
+    proposal_named: Boolean(firstNonEmptyString(skillSpec.name, skillSpec.skill_name)),
     first_party_shape: Boolean(
       firstNonEmptyString(skillSpec.summary, skillSpec.description, skillSpec.objective)
       && acceptanceChecks.length >= 3

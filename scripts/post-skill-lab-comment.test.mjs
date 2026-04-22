@@ -18,7 +18,7 @@ test("buildSkillLabComment renders the rolling issue status comment", () => {
       execution: {
         stdout: JSON.stringify({
           skill_spec: {
-            name: "issue-ledger-followup",
+            skill_name: "issue-ledger-followup",
             kind: "composite-skill",
             status: "proposed",
             summary: "Turn one living work issue ledger into the next high-signal machine update or maintainer handoff packet.",
@@ -59,7 +59,7 @@ test("buildSkillLabComment surfaces proposal quality review gaps", () => {
       execution: {
         stdout: JSON.stringify({
           skill_spec: {
-            name: "decision-brief",
+            skill_name: "decision-brief",
             summary: "Read one work ledger and return one decision packet.",
           },
           acceptance_checks: [{ id: "ac-1" }],
@@ -95,7 +95,7 @@ test("buildSkillLabComment reports proposal_refreshed when publish is not reques
       execution: {
         stdout: JSON.stringify({
           skill_spec: {
-            name: "issue-ledger-followup",
+            skill_name: "issue-ledger-followup",
             summary: "Turn one living work issue ledger into the next high-signal machine update or maintainer handoff packet.",
           },
           acceptance_checks: [{ id: "ac-1" }],

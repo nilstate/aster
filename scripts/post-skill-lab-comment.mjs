@@ -241,7 +241,7 @@ function extractSkillProposalSummary(result) {
   const acceptanceChecks = Array.isArray(payload.acceptance_checks) ? payload.acceptance_checks : [];
 
   return {
-    name: firstNonEmptyString(skillSpec.name),
+    name: firstNonEmptyString(skillSpec.name, skillSpec.skill_name),
     kind: firstNonEmptyString(skillSpec.kind),
     status: firstNonEmptyString(skillSpec.status),
     summary: firstNonEmptyString(skillSpec.summary, skillSpec.description, skillSpec.objective),

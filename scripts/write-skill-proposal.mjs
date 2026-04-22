@@ -40,7 +40,7 @@ export async function materializeSkillProposal(options) {
 }
 
 export function buildSkillProposalMarkdown({ payload, title, issueUrl, issuePacket, jsonPath }) {
-  const proposalTitle = payload.skill_spec?.name ?? title;
+  const proposalTitle = firstNonEmptyString(payload.skill_spec?.name, payload.skill_spec?.skill_name, title);
   const proposalDescription =
     payload.skill_spec?.description
     ?? payload.skill_spec?.summary
@@ -121,7 +121,7 @@ export function buildSkillProposalMarkdown({ payload, title, issueUrl, issuePack
   lines.push(
     "## Skill Contract",
     "",
-    `- name: \`${payload.skill_spec?.name ?? "unknown"}\``,
+    `- name: \`${firstNonEmptyString(payload.skill_spec?.name, payload.skill_spec?.skill_name) ?? "unknown"}\``,
     payload.skill_spec?.kind ? `- kind: \`${payload.skill_spec.kind}\`` : null,
     payload.skill_spec?.status ? `- status: \`${payload.skill_spec.status}\`` : null,
     `- description: ${payload.skill_spec?.description ?? payload.skill_spec?.summary ?? "n/a"}`,

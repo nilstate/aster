@@ -13,7 +13,7 @@ test("buildSkillProposalMarkdown preserves issue rationale and evidence", () => 
     jsonPath: "/tmp/issue-ledger-recap.json",
     payload: {
       skill_spec: {
-        name: "issue-ledger-recap",
+        skill_name: "issue-ledger-recap",
         summary: "Summarize approval issue threads into a reusable packet.",
         objective: "Distill a bounded collaboration subject into a rebuildable approval packet.",
         kind: "composite_skill",

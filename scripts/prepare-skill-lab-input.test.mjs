@@ -38,8 +38,24 @@ test("prepareSkillLabInput normalizes GitHub issue form sections", () => {
   assert.equal(prepared.source_issue.repo, "nilstate/aster");
   assert.equal(prepared.source_issue.ledger_revision, "deadbeefcafebabe");
   assert.match(prepared.project_context, /Why It Matters/);
+  assert.match(prepared.project_context, /Proposal Quality Bar/);
   assert.match(prepared.project_context, /proposal only/);
   assert.equal(prepared.sections.evidence, "- state/thread-teaching.json\n- docs/philosophy.md");
+});
+
+test("prepareSkillLabInput can include the current runx catalog in project context", () => {
+  const prepared = prepareSkillLabInput(
+    {
+      title: "[skill] Add a decision brief skill",
+      body: "Objective: Add a decision brief skill",
+    },
+    {
+      catalogEntries: ["issue-triage", "issue-to-pr", "skill-lab"],
+    },
+  );
+
+  assert.match(prepared.project_context, /Current runx catalog/);
+  assert.match(prepared.project_context, /issue-triage, issue-to-pr, skill-lab/);
 });
 
 test("prepareSkillLabInput strips skill prefix and keeps freeform notes", () => {

@@ -7,11 +7,13 @@ export async function main(argv = process.argv.slice(2)) {
   const options = parseArgs(argv);
   const publish = await readOptionalJson(options.publishJson);
   const result = await readOptionalJson(options.resultJson);
+  const quality = await readOptionalJson(options.qualityJson);
   const commentBody = buildSkillLabComment({
     objective: options.objective,
     runUrl: options.runUrl,
     publish,
     result,
+    quality,
     ledgerRevision: options.ledgerRevision,
     workflowStatus: options.workflowStatus,
   });
@@ -74,14 +76,14 @@ export async function main(argv = process.argv.slice(2)) {
   process.stdout.write(`${JSON.stringify({ status: "posted" }, null, 2)}\n`);
 }
 
-export function buildSkillLabComment({ objective, runUrl, publish, result, ledgerRevision, workflowStatus }) {
+export function buildSkillLabComment({ objective, runUrl, publish, result, quality, ledgerRevision, workflowStatus }) {
   const proposal = extractSkillProposalSummary(result);
   const lines = [
     SKILL_LAB_MARKER,
     "## runx skill lab",
     "",
     `- Objective: \`${String(objective ?? "Untitled skill proposal").trim()}\``,
-    `- Status: \`${resolveSkillLabStatus({ publish, workflowStatus })}\``,
+    `- Status: \`${resolveSkillLabStatus({ publish, quality, workflowStatus })}\``,
   ];
 
   if (proposal?.name) {
@@ -100,11 +102,15 @@ export function buildSkillLabComment({ objective, runUrl, publish, result, ledge
   if (ledgerRevision) {
     lines.push(`- Ledger revision: \`${ledgerRevision}\``);
   }
+  if (quality?.status) {
+    const score = typeof quality.score === "number" ? ` score=\`${quality.score}\`` : "";
+    lines.push(`- Proposal quality: \`${quality.status}\`${score}`);
+  }
   if (runUrl) {
     lines.push(`- Workflow run: ${runUrl}`);
   }
 
-  const refreshLines = buildRefreshSummary({ publish, proposal, workflowStatus });
+  const refreshLines = buildRefreshSummary({ publish, proposal, quality, workflowStatus });
   if (refreshLines.length > 0) {
     lines.push("", "## Changed in this refresh", "", ...refreshLines);
   }
@@ -117,9 +123,12 @@ export function buildSkillLabComment({ objective, runUrl, publish, result, ledge
   return `${lines.join("\n").trim()}\n`;
 }
 
-function resolveSkillLabStatus({ publish, workflowStatus }) {
+function resolveSkillLabStatus({ publish, quality, workflowStatus }) {
   if (workflowStatus && workflowStatus !== "success") {
     return "run_failed";
+  }
+  if (quality?.status === "needs_review") {
+    return "proposal_quality_needs_review";
   }
   if (!publish || typeof publish !== "object") {
     return "proposal_refreshed";
@@ -174,6 +183,10 @@ function parseArgs(argv) {
     }
     if (token === "--result-json") {
       options.resultJson = requireValue(argv, ++index, token);
+      continue;
+    }
+    if (token === "--quality-json") {
+      options.qualityJson = requireValue(argv, ++index, token);
       continue;
     }
     if (token === "--ledger-revision") {
@@ -236,7 +249,7 @@ function extractSkillProposalSummary(result) {
   };
 }
 
-function buildRefreshSummary({ publish, proposal, workflowStatus }) {
+function buildRefreshSummary({ publish, proposal, quality, workflowStatus }) {
   if (workflowStatus && workflowStatus !== "success") {
     return ["- The run failed before proposal refresh completed."];
   }
@@ -248,7 +261,22 @@ function buildRefreshSummary({ publish, proposal, workflowStatus }) {
   if (proposal?.acceptanceCheckCount) {
     lines.push(`- Acceptance checks surfaced: \`${proposal.acceptanceCheckCount}\`.`);
   }
-  if (!publish || publish.status === "missing" || publish.status === "not_requested") {
+  if (quality?.status === "pass") {
+    lines.push("- Proposal quality passed the current first-party, pain-point, and catalog-fit checks.");
+  }
+  if (quality?.status === "needs_review") {
+    lines.push("- Proposal quality still needs review before this reads like a first-party runx skill proposal.");
+    const findings = Array.isArray(quality.findings) ? quality.findings.slice(0, 3) : [];
+    for (const finding of findings) {
+      const summary = firstNonEmptyString(finding?.summary, finding?.message);
+      if (summary) {
+        lines.push(`- Quality gap: ${summary}`);
+      }
+    }
+  }
+  if (quality?.status === "needs_review") {
+    lines.push("- Draft PR publication stays blocked until the proposal quality gaps are resolved, even if `skill-lab.publish` is authorized.");
+  } else if (!publish || publish.status === "missing" || publish.status === "not_requested") {
     lines.push("- Publication remains gated until `skill-lab.publish` is explicitly authorized on the same work issue.");
   }
   return lines;

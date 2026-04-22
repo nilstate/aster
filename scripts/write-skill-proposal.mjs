@@ -135,6 +135,9 @@ export function buildSkillProposalMarkdown({ payload, title, issueUrl, issuePack
     ...formatBulletSection("Invariants", payload.skill_spec?.invariants),
     ...formatFieldSchemaSection("Inputs", payload.skill_spec?.inputs),
     ...formatFieldSchemaSection("Outputs", payload.skill_spec?.outputs),
+    ...formatFlexibleSection("Pain Points", payload.pain_points),
+    ...formatFlexibleSection("Catalog Fit", payload.catalog_fit),
+    ...formatFlexibleSection("Maintainer Decisions", payload.maintainer_decisions),
     ...formatFindingsSection(findings),
     ...formatRecommendedFlowSection(recommendedFlow),
     ...formatSourcesSection(sources),
@@ -308,6 +311,61 @@ function formatBulletSection(title, value) {
     ...value.map((entry) => `- ${formatInlineValue(entry)}`),
     "",
   ];
+}
+
+function formatFlexibleSection(title, value) {
+  if (value == null) {
+    return [];
+  }
+  if (typeof value === "string") {
+    return [`## ${title}`, "", value, ""];
+  }
+  if (Array.isArray(value)) {
+    if (value.length === 0) {
+      return [];
+    }
+    const lines = [`## ${title}`, ""];
+    for (const item of value) {
+      if (typeof item === "string") {
+        lines.push(`- ${item}`);
+        continue;
+      }
+      if (item && typeof item === "object") {
+        const summary = firstNonEmptyString(
+          item.summary,
+          item.problem,
+          item.question,
+          item.title,
+          item.name,
+        );
+        if (summary) {
+          lines.push(`- ${summary}`);
+        } else {
+          lines.push(`- ${JSON.stringify(item)}`);
+        }
+        const details = [
+          firstNonEmptyString(item.why),
+          firstNonEmptyString(item.relevance),
+          firstNonEmptyString(item.rationale),
+        ].filter(Boolean);
+        if (details.length > 0) {
+          lines.push(`  ${details.join(" · ")}`);
+        }
+        const options = Array.isArray(item.options) ? item.options.filter(Boolean) : [];
+        if (options.length > 0) {
+          lines.push(`  options: ${options.join(" | ")}`);
+        }
+        continue;
+      }
+      lines.push(`- ${String(item)}`);
+    }
+    lines.push("");
+    return lines;
+  }
+  if (typeof value === "object") {
+    return formatNamedObjectSection(title, value);
+  }
+  return [`## ${title}`, "", String(value), ""];
 }
 
 function formatFindingsSection(findings) {

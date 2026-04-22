@@ -4,7 +4,10 @@ import path from "node:path";
 async function main(argv = process.argv.slice(2)) {
   const options = parseArgs(argv);
   const issue = JSON.parse(await readFile(path.resolve(options.input), "utf8"));
-  const prepared = prepareSkillLabInput(issue);
+  const catalogEntries = options.catalogFile
+    ? await readCatalogEntries(path.resolve(options.catalogFile))
+    : [];
+  const prepared = prepareSkillLabInput(issue, { catalogEntries });
 
   if (options.output) {
     await writeFile(path.resolve(options.output), `${JSON.stringify(prepared, null, 2)}\n`);
@@ -14,8 +17,9 @@ async function main(argv = process.argv.slice(2)) {
   process.stdout.write(`${JSON.stringify(prepared, null, 2)}\n`);
 }
 
-export function prepareSkillLabInput(issue = {}) {
+export function prepareSkillLabInput(issue = {}, options = {}) {
   const sourceIssue = issue?.issue && typeof issue.issue === "object" ? issue.issue : issue;
+  const catalogEntries = Array.isArray(options.catalogEntries) ? options.catalogEntries : [];
   const sourceRepo = normalizeString(issue?.repo) ?? null;
   const rawAmendments = Array.isArray(issue?.amendments)
     ? issue.amendments
@@ -54,6 +58,21 @@ export function prepareSkillLabInput(issue = {}) {
       `title: ${rawTitle}`,
       sourceIssue.url ? `url: ${sourceIssue.url}` : null,
     ]),
+    "Proposal Quality Bar",
+    formatBulletList([
+      "The deliverable should read like a crisp first-party runx skill proposal, not a builder transcript.",
+      "Name the concrete operator or maintainer pain the skill resolves.",
+      "Explain fit against the current runx catalog and why this is not just duplication of an adjacent skill or chain.",
+      "Turn unresolved ambiguity into explicit maintainer decisions rather than placeholder targets or internal residue.",
+    ]),
+    catalogEntries.length > 0
+      ? [
+          "Current runx catalog",
+          formatBulletList([
+            `consider these adjacent catalog entries before proposing something new: ${catalogEntries.join(", ")}`,
+          ]),
+        ].join("\n")
+      : null,
     whyItMatters ? `Why It Matters\n${whyItMatters}` : null,
     constraints ? `Constraints\n${constraints}` : null,
     evidence ? `Evidence\n${evidence}` : null,
@@ -250,6 +269,10 @@ function parseArgs(argv) {
       options.output = requireValue(argv, ++index, token);
       continue;
     }
+    if (token === "--catalog-file") {
+      options.catalogFile = requireValue(argv, ++index, token);
+      continue;
+    }
     throw new Error(`Unknown argument: ${token}`);
   }
 
@@ -257,6 +280,18 @@ function parseArgs(argv) {
     throw new Error("--input is required.");
   }
   return options;
+}
+
+async function readCatalogEntries(file) {
+  const raw = JSON.parse(await readFile(file, "utf8"));
+  if (!Array.isArray(raw)) {
+    return [];
+  }
+  return raw
+    .map((entry) => normalizeString(entry?.skill_id))
+    .filter(Boolean)
+    .map((entry) => entry.includes("/") ? entry.split("/").at(-1) : entry)
+    .filter(Boolean);
 }
 
 function requireValue(argv, index, flag) {

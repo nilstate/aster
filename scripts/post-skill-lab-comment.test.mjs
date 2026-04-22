@@ -39,6 +39,42 @@ test("buildSkillLabComment renders the rolling issue status comment", () => {
   assert.match(comment, /Reply in this work issue with maintainer amendments/);
 });
 
+test("buildSkillLabComment surfaces proposal quality review gaps", () => {
+  const comment = buildSkillLabComment({
+    objective: "Add a decision brief skill",
+    workflowStatus: "success",
+    quality: {
+      status: "needs_review",
+      score: 0.625,
+      findings: [
+        { summary: "Name the concrete operator or maintainer pain points this skill resolves." },
+        { summary: "Explain where this proposal fits against the current runx catalog." },
+      ],
+    },
+    publish: {
+      status: "not_requested",
+      reason: "skill proposal quality needs review before publication",
+    },
+    result: {
+      execution: {
+        stdout: JSON.stringify({
+          skill_spec: {
+            name: "decision-brief",
+            summary: "Read one work ledger and return one decision packet.",
+          },
+          acceptance_checks: [{ id: "ac-1" }],
+        }),
+      },
+    },
+  });
+
+  assert.match(comment, /Status: `proposal_quality_needs_review`/);
+  assert.match(comment, /Proposal quality: `needs_review` score=`0\.625`/);
+  assert.match(comment, /Quality gap: Name the concrete operator or maintainer pain points/);
+  assert.match(comment, /Quality gap: Explain where this proposal fits against the current runx catalog/);
+  assert.match(comment, /Draft PR publication stays blocked until the proposal quality gaps are resolved/);
+});
+
 test("buildSkillLabComment reports a failed run consistently", () => {
   const comment = buildSkillLabComment({
     objective: "Add an issue-ledger distillation skill",

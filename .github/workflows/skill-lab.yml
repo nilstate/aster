@@ -149,6 +149,7 @@ jobs:
         run: |
           node scripts/prepare-skill-lab-input.mjs \
             --input ".artifacts/skill-lab/issue-ledger.json" \
+            --catalog-file "$GITHUB_WORKSPACE/.runx/runx/oss/packages/cli/src/official-skills.lock.json" \
             --output ".artifacts/skill-lab/request.json"
           jq -r '.objective // ""' .artifacts/skill-lab/request.json > .artifacts/skill-lab/objective.txt
           jq -r '.project_context // ""' .artifacts/skill-lab/request.json > .artifacts/skill-lab/project-context.txt
@@ -196,6 +197,21 @@ jobs:
             --issue-url "${{ steps.issue.outputs.url }}" \
             --issue-packet ".artifacts/skill-lab/request.json"
 
+      - name: Evaluate proposal quality
+        if: ${{ steps.preflight.outputs.enabled == 'true' }}
+        id: proposal_quality
+        run: |
+          node scripts/evaluate-skill-proposal-quality.mjs \
+            --result-json ".artifacts/skill-lab/result.json" \
+            --issue-packet ".artifacts/skill-lab/request.json" \
+            --catalog-file "$GITHUB_WORKSPACE/.runx/runx/oss/packages/cli/src/official-skills.lock.json" \
+            --output ".artifacts/skill-lab/proposal-quality.json"
+          echo "status=$(jq -r '.status' .artifacts/skill-lab/proposal-quality.json)" >> "$GITHUB_OUTPUT"
+          echo "score=$(jq -r '.score' .artifacts/skill-lab/proposal-quality.json)" >> "$GITHUB_OUTPUT"
+          if [ "$(jq -r '.status' .artifacts/skill-lab/proposal-quality.json)" != "pass" ]; then
+            echo "Skill proposal quality needs review before draft PR publication." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
       - name: Validate repo after skill proposal
         if: ${{ steps.preflight.outputs.enabled == 'true' }}
         run: npm run docs:ci
@@ -225,7 +241,7 @@ jobs:
           fi
 
       - name: Write PR body
-        if: ${{ steps.preflight.outputs.enabled == 'true' }}
+        if: ${{ steps.preflight.outputs.enabled == 'true' && steps.proposal_quality.outputs.status == 'pass' }}
         run: |
           cat > .artifacts/skill-lab/pr-body.md <<EOF
           ## Summary
@@ -249,7 +265,7 @@ jobs:
           EOF
 
       - name: Publish draft PR
-        if: ${{ steps.preflight.outputs.enabled == 'true' && steps.gate.outputs.allowed == 'true' }}
+        if: ${{ steps.preflight.outputs.enabled == 'true' && steps.gate.outputs.allowed == 'true' && steps.proposal_quality.outputs.status == 'pass' }}
         run: |
           node scripts/publish-runx-pr.mjs \
             --repo "${{ github.repository }}" \
@@ -264,15 +280,23 @@ jobs:
           cat .artifacts/skill-lab/publish.json
 
       - name: Mark proposal-only run
-        if: ${{ steps.preflight.outputs.enabled == 'true' && steps.gate.outputs.allowed != 'true' }}
+        if: ${{ steps.preflight.outputs.enabled == 'true' && (steps.gate.outputs.allowed != 'true' || steps.proposal_quality.outputs.status != 'pass') }}
         run: |
-          jq -n '{
-            status: "not_requested",
-            reason: "skill-lab.publish gate not granted yet"
-          }' > .artifacts/skill-lab/publish.json
+          if [ "${{ steps.proposal_quality.outputs.status }}" != "pass" ]; then
+            jq -n --arg score "${{ steps.proposal_quality.outputs.score }}" '{
+              status: "not_requested",
+              reason: "skill proposal quality needs review before publication",
+              quality_score: ($score | tonumber?)
+            }' > .artifacts/skill-lab/publish.json
+          else
+            jq -n '{
+              status: "not_requested",
+              reason: "skill-lab.publish gate not granted yet"
+            }' > .artifacts/skill-lab/publish.json
+          fi
 
       - name: Evaluate generated PR
-        if: ${{ steps.preflight.outputs.enabled == 'true' && steps.gate.outputs.allowed == 'true' && hashFiles('.artifacts/skill-lab/publish.json') != '' }}
+        if: ${{ steps.preflight.outputs.enabled == 'true' && steps.gate.outputs.allowed == 'true' && steps.proposal_quality.outputs.status == 'pass' && hashFiles('.artifacts/skill-lab/publish.json') != '' }}
         run: |
           node scripts/evaluate-generated-pr.mjs \
             --publish ".artifacts/skill-lab/publish.json" \
@@ -281,7 +305,7 @@ jobs:
             --output ".artifacts/skill-lab/pr-eval.json"
 
       - name: Queue issue-triage on draft PR
-        if: ${{ steps.preflight.outputs.enabled == 'true' && steps.gate.outputs.allowed == 'true' && hashFiles('.artifacts/skill-lab/publish.json') != '' }}
+        if: ${{ steps.preflight.outputs.enabled == 'true' && steps.gate.outputs.allowed == 'true' && steps.proposal_quality.outputs.status == 'pass' && hashFiles('.artifacts/skill-lab/publish.json') != '' }}
         run: |
           if [ "$(jq -r '.status' .artifacts/skill-lab/publish.json)" != "published" ]; then
             exit 0
@@ -308,6 +332,9 @@ jobs:
           if [ -f ".artifacts/skill-lab/publish.json" ]; then
             args+=(--publish-json ".artifacts/skill-lab/publish.json")
           fi
+          if [ -f ".artifacts/skill-lab/proposal-quality.json" ]; then
+            args+=(--quality-json ".artifacts/skill-lab/proposal-quality.json")
+          fi
           if [ -n "${{ steps.issue_ledger.outputs.ledger_revision }}" ]; then
             args+=(--ledger-revision "${{ steps.issue_ledger.outputs.ledger_revision }}")
           fi
@@ -320,9 +347,12 @@ jobs:
           RUNX_PUBLIC_EVIDENCE_TOKEN: ${{ secrets.RUNX_PUBLIC_EVIDENCE_TOKEN }}
         run: |
           STATUS="${{ job.status }}"
-          if [ "$STATUS" = "success" ] && [ "${{ steps.gate.outputs.allowed }}" = "true" ]; then
+          if [ "$STATUS" = "success" ] && [ "${{ steps.gate.outputs.allowed }}" = "true" ] && [ "${{ steps.proposal_quality.outputs.status }}" = "pass" ]; then
             TITLE="refreshed a skill proposal draft PR"
             SUMMARY="ran skill-lab from the work ledger and refreshed the rolling draft PR"
+          elif [ "$STATUS" = "success" ] && [ "${{ steps.proposal_quality.outputs.status }}" != "pass" ]; then
+            TITLE="refreshed a skill proposal"
+            SUMMARY="ran skill-lab from the work ledger but held draft PR publication because proposal quality needs review"
           elif [ "$STATUS" = "success" ]; then
             TITLE="refreshed a skill proposal"
             SUMMARY="ran skill-lab from the work ledger without opening a draft PR"

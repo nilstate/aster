@@ -41,6 +41,20 @@ test("buildSkillProposalMarkdown preserves issue rationale and evidence", () => 
           },
         ],
       },
+      pain_points: [
+        "Maintainers lose the thread of review decisions when work moves between comments and draft PRs.",
+      ],
+      catalog_fit: {
+        adjacent_skills: ["issue-triage", "skill-lab"],
+        why_new: "Neither adjacent skill emits one bounded review packet from the living work ledger.",
+      },
+      maintainer_decisions: [
+        {
+          question: "Should the first version stop at a review packet?",
+          options: ["yes", "no, also scaffold the skill"],
+          why: "Keeps the first cut small and inspectable.",
+        },
+      ],
       execution_plan: {
         runner: "chain",
       },
@@ -143,6 +157,12 @@ test("buildSkillProposalMarkdown preserves issue rationale and evidence", () => 
   assert.match(markdown, /mutating: false/);
   assert.match(markdown, /## Findings/);
   assert.match(markdown, /The issue thread is the living ledger\./);
+  assert.match(markdown, /## Pain Points/);
+  assert.match(markdown, /Maintainers lose the thread of review decisions/);
+  assert.match(markdown, /## Catalog Fit/);
+  assert.match(markdown, /issue-triage, skill-lab/);
+  assert.match(markdown, /## Maintainer Decisions/);
+  assert.match(markdown, /Should the first version stop at a review packet\?/);
   assert.match(markdown, /## Recommended Flow/);
   assert.match(markdown, /Read the living ledger\./);
   assert.match(markdown, /## Risks/);

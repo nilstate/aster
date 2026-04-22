@@ -106,6 +106,8 @@ const required = [
   "scripts/prepare-skill-upstream.mjs",
   "scripts/prepare-skill-lab-input.mjs",
   "scripts/validate-skill-upstream.mjs",
+  "scripts/evaluate-skill-proposal-quality.mjs",
+  "scripts/evaluate-skill-proposal-quality.test.mjs",
   "scripts/merge-watch.mjs",
   "scripts/enforce-generated-pr-policy.mjs",
   "scripts/prepare-issue-triage-decision.mjs",

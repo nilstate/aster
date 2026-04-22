@@ -150,23 +150,20 @@ jobs:
           node scripts/prepare-skill-lab-input.mjs \
             --input ".artifacts/skill-lab/issue-ledger.json" \
             --output ".artifacts/skill-lab/request.json"
+          jq -r '.objective // ""' .artifacts/skill-lab/request.json > .artifacts/skill-lab/objective.txt
+          jq -r '.project_context // ""' .artifacts/skill-lab/request.json > .artifacts/skill-lab/project-context.txt
           echo "source_repo=$(jq -r '.source_issue.repo // \"\"' .artifacts/skill-lab/request.json)" >> "$GITHUB_OUTPUT"
           echo "ledger_revision=$(jq -r '.source_issue.ledger_revision // \"\"' .artifacts/skill-lab/request.json)" >> "$GITHUB_OUTPUT"
-          echo "objective<<EOF" >> "$GITHUB_OUTPUT"
-          jq -r '.objective' .artifacts/skill-lab/request.json >> "$GITHUB_OUTPUT"
-          echo "EOF" >> "$GITHUB_OUTPUT"
-          echo "project_context<<EOF" >> "$GITHUB_OUTPUT"
-          jq -r '.project_context // ""' .artifacts/skill-lab/request.json >> "$GITHUB_OUTPUT"
-          echo "EOF" >> "$GITHUB_OUTPUT"
+          echo "objective_present=$(jq -r 'if (.objective // \"\") != \"\" then \"true\" else \"false\" end' .artifacts/skill-lab/request.json)" >> "$GITHUB_OUTPUT"
 
-      - name: Run objective-to-skill
+      - name: Run design-skill
         if: ${{ steps.preflight.outputs.enabled == 'true' }}
         timeout-minutes: 30
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          ISSUE_OBJECTIVE: ${{ steps.request.outputs.objective }}
-          ISSUE_CONTEXT: ${{ steps.request.outputs.project_context }}
         run: |
+          ISSUE_OBJECTIVE="$(cat .artifacts/skill-lab/objective.txt)"
+          ISSUE_CONTEXT="$(cat .artifacts/skill-lab/project-context.txt)"
           node scripts/aster-core.mjs \
             --lane skill-lab \
             --runx-root "$GITHUB_WORKSPACE/.runx/runx" \
@@ -185,16 +182,17 @@ jobs:
             --max-artifacts 2 \
             --output "$GITHUB_WORKSPACE/.artifacts/skill-lab/result.json" \
             -- \
-            skill "$GITHUB_WORKSPACE/.runx/runx/skills/objective-to-skill" \
+            skill "$GITHUB_WORKSPACE/.runx/runx/skills/design-skill" \
             --objective "$ISSUE_OBJECTIVE" \
             --project_context "$ISSUE_CONTEXT"
 
       - name: Materialize proposal
         if: ${{ steps.preflight.outputs.enabled == 'true' }}
         run: |
+          ISSUE_OBJECTIVE="$(cat .artifacts/skill-lab/objective.txt)"
           node scripts/write-skill-proposal.mjs \
             --input ".artifacts/skill-lab/result.json" \
-            --title "${{ steps.request.outputs.objective }}" \
+            --title "$ISSUE_OBJECTIVE" \
             --issue-url "${{ steps.issue.outputs.url }}" \
             --issue-packet ".artifacts/skill-lab/request.json"
 
@@ -237,7 +235,7 @@ jobs:
           - Work issue: \`${{ steps.request.outputs.source_repo || github.repository }}#${{ steps.issue.outputs.number }}\`
           - Work issue URL: ${{ steps.issue.outputs.url }}
           - Ledger revision: \`${{ steps.request.outputs.ledger_revision || steps.issue_ledger.outputs.ledger_revision }}\`
-          - Lane: \`objective-to-skill\`
+          - Lane: \`design-skill\`
           - Output: refreshed proposal under \`docs/skill-proposals/\`
 
           ## Validation
@@ -293,13 +291,14 @@ jobs:
             -f pr_number="$(jq -r '.pr_number' .artifacts/skill-lab/publish.json)"
 
       - name: Post skill-lab issue update
-        if: ${{ always() && steps.preflight.outputs.enabled == 'true' && steps.request.outputs.objective != '' }}
+        if: ${{ always() && steps.preflight.outputs.enabled == 'true' && steps.request.outputs.objective_present == 'true' }}
         run: |
           set -euo pipefail
+          ISSUE_OBJECTIVE="$(cat .artifacts/skill-lab/objective.txt)"
           args=(
             --repo "${{ github.repository }}"
             --issue "${{ steps.issue.outputs.number }}"
-            --objective "${{ steps.request.outputs.objective }}"
+            --objective "$ISSUE_OBJECTIVE"
             --run-url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
             --workflow-status "${{ job.status }}"
           )

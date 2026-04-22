@@ -33,6 +33,7 @@ async function main(argv = process.argv.slice(2)) {
 
 export function buildPromotionDrafts({ lane, contextBundle, runResult, now = new Date() }) {
   const signal = extractRunSignal(runResult);
+  const proposal = extractProposalDetails(runResult);
   const date = toDateStamp(now);
   const subjectLabel = String(contextBundle?.subject?.locator ?? contextBundle?.subject?.target_repo ?? "subject");
   const subjectSlug = slugify(subjectLabel);
@@ -53,6 +54,7 @@ export function buildPromotionDrafts({ lane, contextBundle, runResult, now = new
     thread_teaching_context: contextBundle?.thread_teaching_context ?? null,
     gate_decisions: Array.isArray(contextBundle?.gate_decisions) ? contextBundle.gate_decisions : [],
     signal,
+    proposal,
   };
 
   return {
@@ -90,8 +92,7 @@ export async function writePromotionDrafts({ outputDir, drafts }) {
 }
 
 export function extractRunSignal(runResult) {
-  const stdout = firstString(runResult?.execution?.stdout);
-  const parsed = tryParseJson(stdout);
+  const parsed = extractExecutionPayload(runResult);
   const triage = asRecord(parsed?.triage_report);
   const skillSpec = asRecord(parsed?.skill_spec);
   const changeSet = asRecord(parsed?.change_set);
@@ -99,7 +100,10 @@ export function extractRunSignal(runResult) {
 
   const summary =
     firstString(triage?.summary)
+    || firstString(skillSpec?.summary)
+    || firstString(skillSpec?.description)
     || firstString(parsed?.objective_summary)
+    || firstString(skillSpec?.objective)
     || firstString(skillSpec?.name)
     || firstString(changeSet?.summary)
     || firstString(workspaceChangePlan?.change_set_id)
@@ -109,7 +113,7 @@ export function extractRunSignal(runResult) {
     summary,
     recommended_lane: firstString(triage?.recommended_lane) || null,
     suggested_reply: firstString(triage?.suggested_reply) || null,
-    objective_summary: firstString(parsed?.objective_summary) || null,
+    objective_summary: firstString(parsed?.objective_summary) || firstString(skillSpec?.objective) || null,
   };
 }
 
@@ -163,12 +167,29 @@ function buildReflectionDraft({ date, lane, contextBundle, packet }) {
 
   lines.push("", "## Signals", "");
   lines.push(`- Summary: ${packet.summary}`);
+  if (packet.proposal?.name) {
+    lines.push(`- Proposal name: \`${packet.proposal.name}\``);
+  }
+  if (packet.proposal?.kind) {
+    lines.push(`- Proposal kind: \`${packet.proposal.kind}\``);
+  }
+  if (packet.proposal?.status) {
+    lines.push(`- Proposal status: \`${packet.proposal.status}\``);
+  }
+  if (packet.signal.objective_summary) {
+    lines.push(`- Objective: ${packet.signal.objective_summary}`);
+  }
   if (packet.signal.recommended_lane) {
     lines.push(`- Recommended next lane: \`${packet.signal.recommended_lane}\``);
   }
   if (packet.signal.suggested_reply) {
     lines.push(`- Suggested reply: ${packet.signal.suggested_reply}`);
   }
+  if (packet.proposal?.summary) {
+    lines.push(`- Contract summary: ${packet.proposal.summary}`);
+  }
+
+  appendProposalLines(lines, packet.proposal);
 
   lines.push("", "## Promotion Notes", "");
   lines.push("- This reflection draft is derived from the run result and bounded context bundle.");
@@ -228,9 +249,34 @@ function buildHistoryDraft({ date, lane, contextBundle, packet }) {
   if (packet.objective_fingerprint) {
     lines.push("", `Objective fingerprint: \`${packet.objective_fingerprint}\`.`);
   }
+  if (packet.proposal?.summary) {
+    lines.push("", `Contract summary: ${packet.proposal.summary}`);
+  }
   appendThreadTeachingLines(lines, packet);
   lines.push("");
   return `${lines.join("\n")}\n`;
+}
+
+function extractProposalDetails(runResult) {
+  const parsed = extractExecutionPayload(runResult);
+  const skillSpec = asRecord(parsed?.skill_spec);
+  if (!skillSpec) {
+    return null;
+  }
+
+  return {
+    name: firstString(skillSpec?.name) || null,
+    kind: firstString(skillSpec?.kind) || null,
+    status: firstString(skillSpec?.status) || null,
+    summary: firstString(skillSpec?.summary) || firstString(skillSpec?.description) || null,
+    objective: firstString(skillSpec?.objective) || null,
+    invariants: Array.isArray(skillSpec?.invariants) ? skillSpec.invariants.filter((item) => firstString(item)) : [],
+    acceptance_checks: Array.isArray(parsed?.acceptance_checks) ? parsed.acceptance_checks : [],
+    findings: Array.isArray(parsed?.findings) ? parsed.findings : [],
+    recommended_flow: Array.isArray(parsed?.recommended_flow) ? parsed.recommended_flow : [],
+    risks: Array.isArray(parsed?.risks) ? parsed.risks : [],
+    sources: Array.isArray(parsed?.sources) ? parsed.sources : [],
+  };
 }
 
 function parseArgs(argv) {
@@ -305,6 +351,64 @@ function appendThreadTeachingLines(lines, packet) {
     lines.push(`- Gate decision: \`${gateId || "unknown-gate"}\`${gateReason ? ` · ${gateReason}` : ""}`);
   }
   lines.push("- Thread teaching narrows the run, records human teaching, and does not widen authority beyond lane policy.");
+}
+
+function appendProposalLines(lines, proposal) {
+  if (!proposal) {
+    return;
+  }
+
+  if (proposal.objective) {
+    lines.push("", "## Proposal Objective", "", proposal.objective);
+  }
+
+  if (Array.isArray(proposal.findings) && proposal.findings.length > 0) {
+    lines.push("", "## Findings", "");
+    for (const finding of proposal.findings) {
+      const claim = firstString(finding?.claim) || JSON.stringify(finding);
+      lines.push(`- ${claim}`);
+    }
+  }
+
+  if (Array.isArray(proposal.recommended_flow) && proposal.recommended_flow.length > 0) {
+    lines.push("", "## Recommended Flow", "");
+    for (const item of proposal.recommended_flow) {
+      const step = firstString(item?.step) || JSON.stringify(item);
+      const basis = firstString(item?.details) || firstString(item?.basis);
+      lines.push(`- ${step}`);
+      if (basis) {
+        lines.push(`  ${basis}`);
+      }
+    }
+  }
+
+  if (Array.isArray(proposal.acceptance_checks) && proposal.acceptance_checks.length > 0) {
+    lines.push("", "## Acceptance Checks", "");
+    for (const check of proposal.acceptance_checks) {
+      const id = firstString(check?.id);
+      const assertion = firstString(check?.assertion) || firstString(check?.summary);
+      if (id && assertion) {
+        lines.push(`- \`${id}\`: ${assertion}`);
+        continue;
+      }
+      if (assertion) {
+        lines.push(`- ${assertion}`);
+      }
+    }
+  }
+
+  if (Array.isArray(proposal.risks) && proposal.risks.length > 0) {
+    lines.push("", "## Risks", "");
+    for (const risk of proposal.risks) {
+      const summary = firstString(risk?.risk) || JSON.stringify(risk);
+      lines.push(`- ${summary}`);
+    }
+  }
+}
+
+function extractExecutionPayload(runResult) {
+  const stdout = firstString(runResult?.execution?.stdout);
+  return tryParseJson(stdout);
 }
 
 function tryParseJson(value) {

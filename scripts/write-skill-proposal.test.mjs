@@ -1,7 +1,10 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { buildSkillProposalMarkdown } from "./write-skill-proposal.mjs";
+import {
+  buildSkillProposalMarkdown,
+  extractSkillProposalPayload,
+} from "./write-skill-proposal.mjs";
 
 test("buildSkillProposalMarkdown preserves issue rationale and evidence", () => {
   const markdown = buildSkillProposalMarkdown({
@@ -13,10 +16,59 @@ test("buildSkillProposalMarkdown preserves issue rationale and evidence", () => 
         name: "issue-ledger-recap",
         summary: "Summarize approval issue threads into a reusable packet.",
         objective: "Distill a bounded collaboration subject into a rebuildable approval packet.",
+        kind: "composite_skill",
+        status: "proposed",
+        governance: {
+          mutating: false,
+          public_write_allowed: false,
+        },
+        invariants: [
+          "Preserve receipts.",
+        ],
+        inputs: [
+          {
+            name: "subject_locator",
+            type: "string",
+            required: true,
+            description: "Portable locator.",
+          },
+        ],
+        outputs: [
+          {
+            name: "followup_packet",
+            type: "object",
+            description: "One bounded next-action packet.",
+          },
+        ],
       },
       execution_plan: {
         runner: "chain",
       },
+      findings: [
+        {
+          claim: "The issue thread is the living ledger.",
+          source: "issue body",
+        },
+      ],
+      recommended_flow: [
+        {
+          step: "Read the living ledger.",
+          basis: "Keeps the issue canonical.",
+        },
+      ],
+      sources: [
+        {
+          title: "Issue #42",
+          locator: "https://github.com/nilstate/aster/issues/42",
+          notes: "Primary request",
+        },
+      ],
+      risks: [
+        {
+          risk: "Provider lock-in",
+          mitigation: "Keep portable nouns in the core contract.",
+        },
+      ],
       harness_fixture: [
         {
           name: "success",
@@ -87,8 +139,34 @@ test("buildSkillProposalMarkdown preserves issue rationale and evidence", () => 
   assert.match(markdown, /Add an issue-ledger recap skill that turns issue discussion into a bounded approval summary\./);
   assert.match(markdown, /## Objective/);
   assert.match(markdown, /Distill a bounded collaboration subject into a rebuildable approval packet\./);
+  assert.match(markdown, /## Governance/);
+  assert.match(markdown, /mutating: false/);
+  assert.match(markdown, /## Findings/);
+  assert.match(markdown, /The issue thread is the living ledger\./);
+  assert.match(markdown, /## Recommended Flow/);
+  assert.match(markdown, /Read the living ledger\./);
+  assert.match(markdown, /## Risks/);
+  assert.match(markdown, /Provider lock-in/);
   assert.match(markdown, /## Acceptance Checks/);
   assert.match(markdown, /`ac-fixture-passes`: fixture passes/);
   assert.doesNotMatch(markdown, /\[object Object\]/);
   assert.match(markdown, /description: "Summarize approval issue threads into a reusable packet\."/);
+});
+
+test("extractSkillProposalPayload reads nested execution stdout payloads", () => {
+  const payload = extractSkillProposalPayload({
+    execution: {
+      stdout: JSON.stringify({
+        skill_spec: {
+          name: "issue-ledger-followup",
+        },
+        execution_plan: {
+          runner: "chain",
+        },
+      }),
+    },
+  });
+
+  assert.equal(payload.skill_spec?.name, "issue-ledger-followup");
+  assert.equal(payload.execution_plan?.runner, "chain");
 });

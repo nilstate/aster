@@ -23,6 +23,24 @@ test("extractRunSignal prefers triage summaries from execution stdout", () => {
   assert.equal(signal.recommended_lane, "issue-to-pr");
 });
 
+test("extractRunSignal falls back to skill proposal summary when triage data is absent", () => {
+  const signal = extractRunSignal({
+    status: "success",
+    execution: {
+      stdout: JSON.stringify({
+        skill_spec: {
+          name: "issue-ledger-followup",
+          summary: "Emit one bounded next-action packet from the living issue ledger.",
+          objective: "Keep the issue as the living ledger.",
+        },
+      }),
+    },
+  });
+
+  assert.equal(signal.summary, "Emit one bounded next-action packet from the living issue ledger.");
+  assert.equal(signal.objective_summary, "Keep the issue as the living ledger.");
+});
+
 test("buildPromotionDrafts creates reflection and history drafts", () => {
   const drafts = buildPromotionDrafts({
     lane: "issue-triage",
@@ -58,6 +76,34 @@ test("buildPromotionDrafts creates reflection and history drafts", () => {
       },
       execution: {
         stdout: JSON.stringify({
+          skill_spec: {
+            name: "issue-ledger-followup",
+            kind: "composite_skill",
+            status: "proposed",
+            summary: "Emit one bounded next-action packet from the living issue ledger.",
+            objective: "Keep the issue as the living ledger.",
+          },
+          findings: [
+            {
+              claim: "The issue thread is canonical.",
+            },
+          ],
+          recommended_flow: [
+            {
+              step: "Read the issue thread first.",
+            },
+          ],
+          acceptance_checks: [
+            {
+              id: "ac-one-packet",
+              assertion: "emit one packet",
+            },
+          ],
+          risks: [
+            {
+              risk: "Thin stub output",
+            },
+          ],
           triage_report: {
             summary: "README command drift",
           },
@@ -72,9 +118,20 @@ test("buildPromotionDrafts creates reflection and history drafts", () => {
   assert.match(drafts.reflection.content, /## Thread Teaching/);
   assert.match(drafts.reflection.content, /Prefer a draft PR over a direct mutation/);
   assert.match(drafts.reflection.content, /gate\.alpha/);
+  assert.match(drafts.reflection.content, /## Proposal Objective/);
+  assert.match(drafts.reflection.content, /Keep the issue as the living ledger/);
+  assert.match(drafts.reflection.content, /## Findings/);
+  assert.match(drafts.reflection.content, /The issue thread is canonical/);
+  assert.match(drafts.reflection.content, /## Recommended Flow/);
+  assert.match(drafts.reflection.content, /Read the issue thread first/);
+  assert.match(drafts.reflection.content, /## Acceptance Checks/);
+  assert.match(drafts.reflection.content, /`ac-one-packet`: emit one packet/);
+  assert.match(drafts.reflection.content, /## Risks/);
+  assert.match(drafts.reflection.content, /Thin stub output/);
   assert.match(drafts.history.content, /receipt_id: rcpt_123/);
   assert.match(drafts.history.content, /objective_fingerprint: issue:aster-101/);
   assert.match(drafts.history.content, /README command drift/);
+  assert.equal(drafts.packet.proposal?.name, "issue-ledger-followup");
   assert.equal(drafts.packet.thread_teaching_context?.records[0]?.recorded_by, "kam");
   assert.equal(drafts.packet.gate_decisions[0]?.gate_id, "gate.alpha");
   assert.equal(drafts.packet.receipt_id, "rcpt_123");

@@ -178,6 +178,45 @@ test("evaluateSkillProposalQuality accepts adjacent capabilities with a conclusi
   assert.equal(evaluation.checks.catalog_worthiness, true);
 });
 
+test("evaluateSkillProposalQuality allows approval mechanics inside harness-only boundary fixtures", () => {
+  const evaluation = evaluateSkillProposalQuality({
+    report: {
+      execution: {
+        stdout: JSON.stringify({
+          skill_spec: {
+            skill_name: "decision-brief",
+            summary: "Read one bounded work issue thread and return one concise maintainer decision packet.",
+            required_inputs: [{ name: "thread", type: "object" }],
+            output_contract: { name: "decision_packet", type: "object" },
+          },
+          pain_points: ["Maintainers need one next-step packet instead of replaying a whole issue thread."],
+          catalog_fit: {
+            fit_summary: "This is a distinct ledger-to-decision boundary, not another triage or content-drafting surface.",
+            adjacent_entries: [
+              { name: "issue-triage", why: "Routes work but does not emit one decision packet." },
+              { name: "skill-lab", why: "Designs skills but does not run as this runtime handoff." },
+            ],
+          },
+          maintainer_decisions: [{ question: "Approve this as a net-new skill?" }],
+          findings: [{ claim: "The source issue requests one bounded decision packet." }],
+          acceptance_checks: [{ id: "ac-1" }, { id: "ac-2" }, { id: "ac-3" }],
+          harness_fixture: [
+            {
+              name: "boundary-no-publish",
+              yaml: "body: structured teaching: publish_authorization must still stop at review",
+            },
+          ],
+        }),
+      },
+    },
+    catalogEntries: ["issue-triage", "skill-lab"],
+  });
+
+  assert.equal(evaluation.status, "pass");
+  assert.equal(evaluation.checks.builder_residue_free, true);
+  assert.equal(evaluation.checks.human_grade_surface, true);
+});
+
 test("evaluateSkillProposalQuality flags builder residue and missing catalog fit", () => {
   const evaluation = evaluateSkillProposalQuality({
     report: {

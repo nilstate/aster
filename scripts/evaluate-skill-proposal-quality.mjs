@@ -84,30 +84,41 @@ export function evaluateSkillProposalQuality({ report, issuePacket = null, catal
   const findingText = collectText(payload?.findings).join("\n").trim();
   const sourceText = collectText(payload?.sources).join("\n").trim();
   const harnessFixtures = Array.isArray(payload?.harness_fixture) ? payload.harness_fixture : [];
-  const inputFields = Array.isArray(skillSpec.inputs) ? skillSpec.inputs : [];
-  const outputFields = Array.isArray(skillSpec.outputs) ? skillSpec.outputs : [];
+  const inputFields = Array.isArray(skillSpec.inputs)
+    ? skillSpec.inputs
+    : Array.isArray(skillSpec.required_inputs)
+      ? skillSpec.required_inputs
+      : [];
+  const outputFields = Array.isArray(skillSpec.outputs)
+    ? skillSpec.outputs
+    : isRecord(skillSpec.output_contract)
+      ? [skillSpec.output_contract]
+      : [];
   const summaryText = firstNonEmptyString(skillSpec.summary, skillSpec.description, skillSpec.objective);
   const openQuestions = Array.isArray(payload?.execution_plan?.open_questions_left_out_of_scope)
     ? payload.execution_plan.open_questions_left_out_of_scope.filter(Boolean)
     : [];
-  const proposalText = [
+  const readerFacingProposalText = [
     ...collectText(skillSpec),
     ...collectText(payload?.pain_points),
     ...collectText(payload?.catalog_fit),
     ...collectText(payload?.maintainer_decisions),
     ...collectText(payload?.execution_plan),
-    ...collectText(payload?.harness_fixture),
     ...collectText(payload?.findings),
     ...collectText(payload?.sources),
   ].join("\n");
+  const allProposalText = [
+    readerFacingProposalText,
+    ...collectText(payload?.harness_fixture),
+  ].join("\n");
   const residueHits = residuePatterns
-    .filter(({ pattern }) => pattern.test(proposalText))
+    .filter(({ pattern }) => pattern.test(readerFacingProposalText))
     .map(({ id, message }) => ({ id, message }));
-  const placeholderFree = !/\bUNRESOLVED_[A-Z0-9_]+\b|\bTBD\b|placeholder target|placeholder_value/i.test(proposalText);
+  const placeholderFree = !/\bUNRESOLVED_[A-Z0-9_]+\b|\bTBD\b|placeholder target|placeholder_value/i.test(allProposalText);
   const humanGradeSurface = residueHits.length === 0
     && placeholderFree
     && countWords(summaryText) >= 8
-    && !/\b(?:automatically generated|as an ai|llm|machine-generated)\b/i.test(proposalText);
+    && !/\b(?:automatically generated|as an ai|llm|machine-generated)\b/i.test(readerFacingProposalText);
   const catalogBoundaryExplicit = hasCatalogBoundary(payload?.catalog_fit);
   const implementationReady = acceptanceChecks.length >= 3
     && harnessFixtures.length > 0
@@ -347,9 +358,11 @@ function hasCatalogBoundary(value) {
     value.adjacent_chains,
     value.adjacent_catalog_entries,
     value.adjacent_capabilities,
+    value.adjacent_entries,
     value.overlap,
   ].some((entry) => Array.isArray(entry) ? entry.length > 0 : Boolean(firstNonEmptyString(entry)));
   const boundary = firstNonEmptyString(
+    value.fit_summary,
     value.why_new,
     value.why_not_existing,
     value.boundary,
@@ -358,6 +371,7 @@ function hasCatalogBoundary(value) {
     value.rationale,
     value.positioning,
     value.conclusion,
+    value.catalog_risk,
   );
   return adjacent && Boolean(boundary);
 }

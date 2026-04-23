@@ -51,6 +51,37 @@ test("evaluateSkillProposalQuality passes a crisp first-party proposal", () => {
   assert.equal(evaluation.findings.length, 0);
 });
 
+test("evaluateSkillProposalQuality accepts purpose as the proposal summary field", () => {
+  const evaluation = evaluateSkillProposalQuality({
+    report: {
+      execution: {
+        stdout: JSON.stringify({
+          skill_spec: {
+            skill_name: "decision-brief",
+            purpose: "Turn one living work ledger into one bounded maintainer decision packet.",
+            inputs: [{ name: "thread", type: "object" }],
+            output_schema: { name: "decision_packet" },
+          },
+          pain_points: ["Maintainers need one current decision packet instead of replaying a whole thread."],
+          catalog_fit: {
+            adjacent_capabilities: [{ name: "issue-triage" }],
+            why_this_is_a_candidate_new_capability: "Compared with issue-triage, this owns the ledger-to-decision handoff.",
+          },
+          maintainer_decisions: [{ question: "Add this as a first-party skill?" }],
+          findings: [{ claim: "The source issue asks for a decision handoff." }],
+          acceptance_checks: [{ id: "ac-1" }, { id: "ac-2" }, { id: "ac-3" }],
+          harness_fixture: [{ name: "success" }],
+        }),
+      },
+    },
+    catalogEntries: ["issue-triage"],
+  });
+
+  assert.equal(evaluation.status, "pass");
+  assert.equal(evaluation.checks.first_party_shape, true);
+  assert.equal(evaluation.checks.human_grade_surface, true);
+});
+
 test("evaluateSkillProposalQuality ignores natural-language placeholder mentions", () => {
   const evaluation = evaluateSkillProposalQuality({
     report: {

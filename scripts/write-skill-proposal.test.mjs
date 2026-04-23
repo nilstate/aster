@@ -193,3 +193,36 @@ test("extractSkillProposalPayload reads nested execution stdout payloads", () =>
   assert.equal(payload.skill_spec?.name, "issue-ledger-followup");
   assert.equal(payload.execution_plan?.runner, "chain");
 });
+
+test("buildSkillProposalMarkdown uses purpose when summary is absent", () => {
+  const markdown = buildSkillProposalMarkdown({
+    title: "Add decision brief",
+    issueUrl: "https://github.com/nilstate/aster/issues/115",
+    jsonPath: "/tmp/decision-brief.json",
+    payload: {
+      skill_spec: {
+        name: "decision-brief",
+        purpose: "Turn one living work ledger into one bounded maintainer decision packet.",
+      },
+      pain_points: ["Maintainers need one current decision packet."],
+      catalog_fit: {
+        adjacent_capabilities: ["issue-triage"],
+        why_new: "Compared with issue-triage, this owns the decision handoff.",
+      },
+      maintainer_decisions: [{ question: "Add this skill?" }],
+      acceptance_checks: ["Returns one packet.", "Stops at review.", "Preserves provenance."],
+    },
+    issuePacket: {
+      source_issue: {
+        repo: "nilstate/aster",
+        number: 115,
+      },
+      sections: {},
+      amendments: [],
+    },
+  });
+
+  assert.match(markdown, /description: "Turn one living work ledger into one bounded maintainer decision packet\."/);
+  assert.match(markdown, /- description: Turn one living work ledger into one bounded maintainer decision packet\./);
+  assert.match(markdown, /## Job To Be Done\n\nTurn one living work ledger into one bounded maintainer decision packet\./);
+});

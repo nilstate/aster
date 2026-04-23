@@ -44,10 +44,11 @@ export function buildSkillProposalMarkdown({ payload, title, issueUrl, issuePack
   const proposalDescription =
     payload.skill_spec?.description
     ?? payload.skill_spec?.summary
+    ?? payload.skill_spec?.purpose
     ?? "First-party runx skill proposal.";
   const acceptanceChecks = formatAcceptanceChecks(payload.acceptance_checks);
   const effectiveObjective =
-    firstNonEmptyString(payload.skill_spec?.objective, payload.skill_spec?.summary, title)
+    firstNonEmptyString(payload.skill_spec?.objective, payload.skill_spec?.summary, payload.skill_spec?.purpose, title)
     ?? "Define the bounded job this skill should perform.";
 
   const sourceSections = issuePacket?.sections ?? {};
@@ -96,7 +97,7 @@ export function buildSkillProposalMarkdown({ payload, title, issueUrl, issuePack
     `- name: \`${firstNonEmptyString(payload.skill_spec?.name, payload.skill_spec?.skill_name) ?? "unknown"}\``,
     payload.skill_spec?.kind ? `- kind: \`${payload.skill_spec.kind}\`` : null,
     payload.skill_spec?.status ? `- status: \`${payload.skill_spec.status}\`` : null,
-    `- description: ${payload.skill_spec?.description ?? payload.skill_spec?.summary ?? "n/a"}`,
+    `- description: ${payload.skill_spec?.description ?? payload.skill_spec?.summary ?? payload.skill_spec?.purpose ?? "n/a"}`,
     Array.isArray(payload.skill_spec?.composes_with) && payload.skill_spec.composes_with.length > 0
       ? `- composes_with: ${payload.skill_spec.composes_with.map((value) => `\`${value}\``).join(", ")}`
       : null,

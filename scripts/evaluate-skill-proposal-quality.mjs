@@ -101,7 +101,7 @@ export function evaluateSkillProposalQuality({ report, issuePacket = null, catal
     : isRecord(skillSpec.output_contract)
       ? [skillSpec.output_contract]
       : [];
-  const summaryText = firstNonEmptyString(skillSpec.summary, skillSpec.description, skillSpec.objective);
+  const summaryText = firstNonEmptyString(skillSpec.summary, skillSpec.description, skillSpec.objective, skillSpec.purpose);
   const openQuestions = Array.isArray(payload?.execution_plan?.open_questions_left_out_of_scope)
     ? payload.execution_plan.open_questions_left_out_of_scope.filter(Boolean)
     : [];
@@ -146,7 +146,7 @@ export function evaluateSkillProposalQuality({ report, issuePacket = null, catal
   const checks = {
     proposal_named: Boolean(firstNonEmptyString(skillSpec.name, skillSpec.skill_name)),
     first_party_shape: Boolean(
-      firstNonEmptyString(skillSpec.summary, skillSpec.description, skillSpec.objective)
+      firstNonEmptyString(skillSpec.summary, skillSpec.description, skillSpec.objective, skillSpec.purpose)
       && acceptanceChecks.length >= 3
     ),
     pain_points_explicit: painPoints.length > 0,
@@ -373,6 +373,8 @@ function hasCatalogBoundary(value) {
     value.fit_summary,
     value.why_new,
     value.why_new_first_party_capability,
+    value.why_this_is_a_candidate_new_capability,
+    value.new_capability_case,
     value.new_capability_justification,
     value.why_not_existing,
     value.boundary,
@@ -386,7 +388,7 @@ function hasCatalogBoundary(value) {
   const text = collectText(value).join("\n");
   return adjacent && (
     Boolean(boundary)
-    || /\b(gap|fills|distinct|separate|new capability|not enough|not duplicate|not a duplicate|not general|not a fit|not the runtime|rather than|instead of)\b/i.test(text)
+    || /\b(gap|fills|distinct|separate|new capability|not enough|not duplicate|not a duplicate|not general|not a fit|not the runtime|compared with|rather than|instead of)\b/i.test(text)
   );
 }
 

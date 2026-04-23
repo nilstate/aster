@@ -364,6 +364,7 @@ function hasCatalogBoundary(value) {
     value.overlap,
   ].some((entry) => Array.isArray(entry) ? entry.length > 0 : Boolean(firstNonEmptyString(entry)));
   const boundary = firstNonEmptyString(
+    value.summary,
     value.fit_summary,
     value.why_new,
     value.why_new_first_party_capability,

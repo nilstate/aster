@@ -191,6 +191,7 @@ test("evaluateSkillProposalQuality allows approval mechanics inside harness-only
           },
           pain_points: ["Maintainers need one next-step packet instead of replaying a whole issue thread."],
           catalog_fit: {
+            summary: "This should stay first-party because it is the reusable ledger-to-decision handoff.",
             fit_summary: "This is a distinct ledger-to-decision boundary, not another triage or content-drafting surface.",
             adjacent_entries: [
               { name: "issue-triage", why: "Routes work but does not emit one decision packet." },

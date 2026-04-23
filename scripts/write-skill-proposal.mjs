@@ -259,8 +259,7 @@ function formatNamedObjectSection(title, value) {
 
   const lines = [`## ${title}`, ""];
   for (const [key, raw] of Object.entries(value)) {
-    const rendered = formatInlineValue(raw);
-    lines.push(`- ${key}: ${rendered}`);
+    lines.push(...formatObjectFieldLines(key, raw));
   }
   lines.push("");
   return lines;
@@ -319,7 +318,7 @@ function formatFlexibleSection(title, value) {
         }
         const options = Array.isArray(item.options) ? item.options.filter(Boolean) : [];
         if (options.length > 0) {
-          lines.push(`  options: ${options.join(" | ")}`);
+          lines.push(`  options: ${options.map((option) => formatInlineValue(option)).join(" | ")}`);
         }
         continue;
       }
@@ -351,7 +350,7 @@ function formatBoundarySection({ constraints, risks }) {
   const lines = ["## Boundaries", ""];
   let wrote = false;
   if (constraints) {
-    lines.push(collapseWhitespace(constraints), "");
+    lines.push(...formatBlockLines(constraints), "");
     wrote = true;
   }
   const riskLines = formatRisksSection(risks);
@@ -557,6 +556,17 @@ function collapseWhitespace(value) {
     .trim();
 }
 
+function formatBlockLines(value) {
+  const lines = String(value ?? "")
+    .split(/\r?\n/)
+    .map((line) => line.trimEnd())
+    .filter((line) => line.trim().length > 0);
+  if (lines.length <= 1) {
+    return [collapseWhitespace(value)];
+  }
+  return lines;
+}
+
 function normalizeWorkIssueNumber(value) {
   if (typeof value === "number" && Number.isFinite(value)) {
     return String(value);
@@ -600,9 +610,61 @@ function formatInlineValue(value) {
     return value.map((entry) => formatInlineValue(entry)).join(", ");
   }
   if (value && typeof value === "object") {
-    return JSON.stringify(value);
+    return formatObjectSummary(value);
   }
   return "n/a";
+}
+
+function formatObjectFieldLines(key, raw) {
+  if (Array.isArray(raw)) {
+    if (raw.length === 0) {
+      return [`- ${key}: none`];
+    }
+    if (raw.every((entry) => entry && typeof entry === "object" && !Array.isArray(entry))) {
+      return [
+        `- ${key}:`,
+        ...raw.map((entry) => `  - ${formatObjectSummary(entry)}`),
+      ];
+    }
+    return [`- ${key}: ${formatInlineValue(raw)}`];
+  }
+  return [`- ${key}: ${formatInlineValue(raw)}`];
+}
+
+function formatObjectSummary(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return String(value);
+  }
+  const label = firstNonEmptyString(
+    value.name,
+    value.capability,
+    value.option,
+    value.id,
+    value.kind,
+    value.title,
+  );
+  const detail = firstNonEmptyString(
+    value.why,
+    value.boundary,
+    value.effect,
+    value.assertion,
+    value.summary,
+    value.description,
+    value.rationale,
+    value.mitigation,
+  );
+  if (label && detail) {
+    return `${label}: ${detail}`;
+  }
+  if (label) {
+    return label;
+  }
+  if (detail) {
+    return detail;
+  }
+  return Object.entries(value)
+    .map(([entryKey, entryValue]) => `${entryKey}=${formatInlineValue(entryValue)}`)
+    .join(" · ");
 }
 
 if (process.argv[1] && import.meta.url === new URL(`file://${process.argv[1]}`).href) {

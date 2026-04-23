@@ -206,10 +206,25 @@ test("buildSkillProposalMarkdown uses purpose when summary is absent", () => {
       },
       pain_points: ["Maintainers need one current decision packet."],
       catalog_fit: {
-        adjacent_capabilities: ["issue-triage"],
+        adjacent_capabilities: [
+          {
+            name: "issue-triage",
+            why: "Compared with issue-triage, this owns the decision handoff.",
+          },
+        ],
         why_new: "Compared with issue-triage, this owns the decision handoff.",
       },
-      maintainer_decisions: [{ question: "Add this skill?" }],
+      maintainer_decisions: [
+        {
+          question: "Add this skill?",
+          options: [
+            {
+              option: "add_new_skill",
+              effect: "Create the reusable handoff primitive.",
+            },
+          ],
+        },
+      ],
       acceptance_checks: ["Returns one packet.", "Stops at review.", "Preserves provenance."],
     },
     issuePacket: {
@@ -217,7 +232,9 @@ test("buildSkillProposalMarkdown uses purpose when summary is absent", () => {
         repo: "nilstate/aster",
         number: 115,
       },
-      sections: {},
+      sections: {
+        constraints: "- Stop at review.\n- Do not publish.",
+      },
       amendments: [],
     },
   });
@@ -225,4 +242,9 @@ test("buildSkillProposalMarkdown uses purpose when summary is absent", () => {
   assert.match(markdown, /description: "Turn one living work ledger into one bounded maintainer decision packet\."/);
   assert.match(markdown, /- description: Turn one living work ledger into one bounded maintainer decision packet\./);
   assert.match(markdown, /## Job To Be Done\n\nTurn one living work ledger into one bounded maintainer decision packet\./);
+  assert.match(markdown, /- adjacent_capabilities:\n  - issue-triage: Compared with issue-triage, this owns the decision handoff\./);
+  assert.match(markdown, /options: add_new_skill: Create the reusable handoff primitive\./);
+  assert.match(markdown, /- Stop at review\.\n- Do not publish\./);
+  assert.doesNotMatch(markdown, /\[object Object\]/);
+  assert.doesNotMatch(markdown, /\{"name":/);
 });
